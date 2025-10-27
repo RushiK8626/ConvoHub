@@ -1,0 +1,146 @@
+.profile-page {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--background-color);
+  padding-bottom: 80px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--header-background);
+  color: var(--header-text-color);
+}
+
+.profile-header h1 {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--header-text-color);
+}
+
+.profile-header .back-btn,
+.edit-btn,
+.save-btn {
+  background: none;
+  border: none;
+  color: var(--header-text-color);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.profile-header .back-btn:hover,
+.edit-btn:hover,
+.save-btn:hover {
+  background: var(--avatar-bg);
+}
+
+.profile-content {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.profile-avatar-section {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px 30px;
+  background: var(--background-color);
+}
+
+.profile-avatar-large {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
+.avatar-emoji-large {
+  font-size: 64px;
+  color: white;
+  font-weight: 600;
+}
+
+.change-avatar-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: white;
+  border: 3px solid #667eea;
+  color: #667eea;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.change-avatar-btn:hover {
+  transform: scale(1.1);
+  background: #667eea;
+  color: white;
+}
+
+.profile-form {
+  padding: 20px;
+}
+
+.profile-form .form-group {
+  margin-bottom: 24px;
+}
+
+.profile-form label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.profile-value {
+  font-size: 16px;
+  color: var(--text-color);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.textarea-field {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.button-group button {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .profile-avatar-large {
+    width: 100px;
+    height: 100px;
+  }
+
+  .avatar-emoji-large {
+    font-size: 52px;
+  }
+}

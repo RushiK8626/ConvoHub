@@ -1,0 +1,56 @@
+/* Default theme (Light Mode) */
+:root {
+  --primary-color: #007AFF;
+  --primary-light: rgba(0, 122, 255, 0.1);
+  --background-color: #ffffff;
+  --header-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --header-text-color: #ffffff;
+  --card-background: #ffffff;
+  --modal-background: #ffffff;
+  --text-color: #000000;
+  --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --icon-background: #f5f5f5;
+  --message-received-bg: #f0f0f0;
+  --message-received-text: #000000;
+  --message-sent-bg: #007AFF;
+  --message-sent-text: #ffffff;
+  --input-background: #f5f5f5;
+  --hover-background: #f5f5f5;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+  --avatar-bg: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark Mode (Pitch Black) */
+[data-theme='dark'] {
+  --primary-color: #0A84FF;
+  --primary-light: rgba(10, 132, 255, 0.15);
+  --background-color: #000000;
+  --header-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --header-text-color: #ffffff;
+  --card-background: #000000;
+  --modal-background: #1a1a1a;
+  --text-color: #ffffff;
+  --text-secondary: #a0a0a0;
+  --border-color: #2a2a2a;
+  --icon-background: #1a1a1a;
+  --message-received-bg: #1a1a1a;
+  --message-received-text: #ffffff;
+  --message-sent-bg: #0A84FF;
+  --message-sent-text: #ffffff;
+  --input-background: #1a1a1a;
+  --hover-background: #1a1a1a;
+  --shadow: rgba(255, 255, 255, 0.05);
+  --modal-overlay: rgba(0, 0, 0, 0.8);
+  --avatar-bg: rgba(255, 255, 255, 0.15);
+}
+
+/* Apply theme to body */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Remove transitions from everything to avoid performance issues */
+/* Only apply to specific properties that need it */

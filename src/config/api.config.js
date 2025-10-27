@@ -1,0 +1,51 @@
+// API Configuration for different environments
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// You can set these via environment variables
+const config = {
+  // API Base URL
+  API_BASE_URL: process.env.REACT_APP_API_URL || 
+    (isDevelopment ? 'http://localhost:3001' : 'https://your-backend-api.com'),
+  
+  // Socket URL
+  SOCKET_URL: process.env.REACT_APP_SOCKET_URL || 
+    (isDevelopment ? 'http://localhost:3001' : 'https://your-backend-api.com'),
+  
+  // Upload URLs
+  getUploadUrl: (type, filename) => {
+    const baseUrl = config.API_BASE_URL;
+    return `${baseUrl}/uploads/${type}/${filename}`;
+  },
+  
+  // API Endpoints
+  api: {
+    auth: {
+      login: '/api/auth/login',
+      register: '/api/auth/register',
+      logout: '/api/auth/logout',
+      refreshToken: '/api/auth/refresh-token',
+      verifyOtp: '/api/auth/verify-otp',
+    },
+    users: {
+      profile: '/api/users/profile',
+      publicById: (userId) => `/api/users/public/id/${userId}`,
+      block: (userId) => `/api/users/block/${userId}`,
+      unblock: (userId) => `/api/users/unblock/${userId}`,
+      blocked: '/api/users/blocked',
+    },
+    chats: {
+      list: '/api/chats',
+      info: (chatId) => `/api/chats/${chatId}/info`,
+      messages: (chatId) => `/api/chats/${chatId}/messages`,
+      create: '/api/chats',
+    },
+    messages: {
+      send: '/api/messages',
+      markRead: (messageId) => `/api/messages/${messageId}/read`,
+      delete: (messageId) => `/api/messages/${messageId}`,
+    },
+  },
+};
+
+export default config;

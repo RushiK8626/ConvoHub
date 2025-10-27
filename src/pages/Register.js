@@ -1,0 +1,204 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react';
+import './Register.css';
+
+const Register = () => {
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    username: '',
+    email: '',
+    mobile: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fullName) newErrors.fullName = 'Full name is required';
+    if (!formData.username) newErrors.username = 'Username is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+    if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
+    else if (!/^\d{10}$/.test(formData.mobile)) newErrors.mobile = 'Mobile number must be 10 digits';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = validateForm();
+    
+    if (Object.keys(newErrors).length === 0) {
+      localStorage.setItem('pendingAuth', JSON.stringify(formData));
+      navigate('/verify-otp', { state: { type: 'register' } });
+    } else {
+      setErrors(newErrors);
+    }
+  };
+
+  return (
+    <div className="register-container">
+      <div className="register-card fade-in">
+        <div className="register-header">
+          <div className="logo">
+            <div className="logo-icon">💬</div>
+          </div>
+          <h1>Create Account</h1>
+          <p>Join ConvoHub and start connecting</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="register-form">
+          <div className="form-group">
+            <label htmlFor="fullName">Full Name</label>
+            <div className="input-wrapper">
+              <User className="input-icon" size={20} />
+              <input
+                type="text"
+                id="fullName"
+                name="fullName"
+                className={`input-field ${errors.fullName ? 'error' : ''}`}
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <div className="input-wrapper">
+              <User className="input-icon" size={20} />
+              <input
+                type="text"
+                id="username"
+                name="username"
+                className={`input-field ${errors.username ? 'error' : ''}`}
+                placeholder="Choose a username"
+                value={formData.username}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.username && <span className="error-text">{errors.username}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className={`input-field ${errors.email ? 'error' : ''}`}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.email && <span className="error-text">{errors.email}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="mobile">Mobile Number</label>
+            <div className="input-wrapper">
+              <Phone className="input-icon" size={20} />
+              <input
+                type="tel"
+                id="mobile"
+                name="mobile"
+                className={`input-field ${errors.mobile ? 'error' : ''}`}
+                placeholder="Enter your mobile number"
+                value={formData.mobile}
+                onChange={handleChange}
+              />
+            </div>
+            {errors.mobile && <span className="error-text">{errors.mobile}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
+                className={`input-field ${errors.password ? 'error' : ''}`}
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {errors.password && <span className="error-text">{errors.password}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                className={`input-field ${errors.confirmPassword ? 'error' : ''}`}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {errors.confirmPassword && <span className="error-text">{errors.confirmPassword}</span>}
+          </div>
+
+          <button type="submit" className="btn-primary btn-register">
+            Create Account
+          </button>
+        </form>
+
+        <div className="register-footer">
+          <p>
+            Already have an account?{' '}
+            <Link to="/login" className="login-link">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
