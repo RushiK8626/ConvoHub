@@ -5,7 +5,7 @@ const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
 // Debug: Log the Socket URL being used
 console.log('🔌 Socket URL:', SOCKET_URL);
 console.log('🔧 Environment:', process.env.NODE_ENV);
-console.log(' Server URL: ', process.env.REACT_APP_API_URL);
+console.log('🌐 Server URL:', process.env.REACT_APP_API_URL);
 class SocketService {
   constructor() {
     this.socket = null;
