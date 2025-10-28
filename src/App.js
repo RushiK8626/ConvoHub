@@ -13,6 +13,11 @@ import BlockedUsers from './pages/BlockedUsers';
 import './App.css';
 import './styles/theme.css';
 
+// Debug: Log API configuration
+// console.log('🌐 API Base URL:', process.env.REACT_APP_API_URL || 'http://localhost:3001');
+// console.log('🔌 Socket URL:', process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001');
+// console.log('🔧 Environment:', process.env.NODE_ENV);
+
 // Auth context to force rerender on login/logout
 export const AuthContext = createContext({ refreshAuth: () => {} });
 

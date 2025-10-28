@@ -91,7 +91,7 @@ const Settings = () => {
       const userId = user.user_id;
       try {
         if (userId) {
-          await fetch('http://localhost:3001/api/auth/logout', {
+          await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/auth/logout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId }),

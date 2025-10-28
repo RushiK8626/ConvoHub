@@ -40,7 +40,7 @@ const Profile = () => {
 
       try {
         const token = localStorage.getItem('accessToken');
-        const res = await fetch(`http://localhost:3001/api/users/${userId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ const Profile = () => {
           let profilePicUrl = null;
           if (userData.profile_pic) {
             const filename = userData.profile_pic.split('/uploads/').pop();
-            profilePicUrl = `http://localhost:3001/uploads/profiles/${filename}`;
+            profilePicUrl = `${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`;
           }
 
           const profile = {
@@ -112,7 +112,7 @@ const Profile = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -180,7 +180,7 @@ const Profile = () => {
       formData.append('profilePic', file);  // ✅ Changed from 'profile_pic'
 
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:3001/uploads/profile-pic', {  // ✅ Changed from '/upload/'
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profile-pic`, {  // ✅ Changed from '/upload/'
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -194,7 +194,7 @@ const Profile = () => {
         // Update profile picture URL
         if (data.profile_pic) {
           const filename = data.profile_pic.split('/uploads/').pop();
-          const newProfilePicUrl = `http://localhost:3001/uploads/profiles/${filename}`;
+          const newProfilePicUrl = `${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`;
           
           setProfileData(prev => ({
             ...prev,

@@ -19,7 +19,7 @@ const ChatInfoModal = ({
     try {
       const token = localStorage.getItem('accessToken');
       const filename = imagePath.split('/uploads/').pop();
-      const res = await fetch(`http://localhost:3001/uploads/chat-images/${filename}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/chat-images/${filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -40,7 +40,7 @@ const ChatInfoModal = ({
     try {
       const token = localStorage.getItem('accessToken');
       const filename = profilePicPath.split('/uploads/').pop();
-      const res = await fetch(`http://localhost:3001/uploads/profiles/${filename}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -63,7 +63,7 @@ const ChatInfoModal = ({
       
       if (chatType === 'group') {
         // Fetch group chat info
-        let res = await fetch(`http://localhost:3001/api/chats/${chatId}/info`, {
+        let res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/chats/${chatId}/info`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ const ChatInfoModal = ({
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken) {
             try {
-              const refreshRes = await fetch('http://localhost:3001/api/auth/refresh-token', {
+              const refreshRes = await fetch('${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/auth/refresh-token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: String(refreshToken) }),
@@ -86,7 +86,7 @@ const ChatInfoModal = ({
                 token = refreshData.accessToken;
                 
                 // Retry the request with new token
-                res = await fetch(`http://localhost:3001/api/chats/${chatId}/info`, {
+                res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/chats/${chatId}/info`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const ChatInfoModal = ({
         }
       } else if (chatType === 'private' && otherUserId) {
         // Fetch user details for private chat
-        let res = await fetch(`http://localhost:3001/api/users/public/id/${otherUserId}`, {
+        let res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/public/id/${otherUserId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ const ChatInfoModal = ({
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken) {
             try {
-              const refreshRes = await fetch('http://localhost:3001/api/auth/refresh-token', {
+              const refreshRes = await fetch('${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/auth/refresh-token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: String(refreshToken) }),
@@ -137,7 +137,7 @@ const ChatInfoModal = ({
                 token = refreshData.accessToken;
                 
                 // Retry the request with new token
-                res = await fetch(`http://localhost:3001/api/users/public/id/${otherUserId}`, {
+                res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/public/id/${otherUserId}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',

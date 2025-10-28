@@ -52,7 +52,7 @@ const ChatWindow = () => {
     if (userProfiles[senderId] || senderId === userId) return;
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:3001/api/users/public/id/${senderId}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/public/id/${senderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ const ChatWindow = () => {
         if (userData.profile_pic) {
           // Extract filename from path like /uploads/25002-xxx.jpg
           const filename = userData.profile_pic.split('/uploads/').pop();
-          userData.profile_pic = `http://localhost:3001/uploads/profiles/${filename}`;
+          userData.profile_pic = `${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`;
         }
         
         setUserProfiles(prev => ({
@@ -85,7 +85,7 @@ const ChatWindow = () => {
     try {
       const token = localStorage.getItem('accessToken');
       const filename = imagePath.split('/uploads/').pop();
-      const res = await fetch(`http://localhost:3001/uploads/chat-images/${filename}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/chat-images/${filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -118,7 +118,7 @@ const ChatWindow = () => {
       try {
         const token = localStorage.getItem('accessToken');
         // Fetch chat info
-        const chatRes = await fetch(`http://localhost:3001/api/chats/${chatId}`, {
+        const chatRes = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/chats/${chatId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ const ChatWindow = () => {
           otherUserId: otherUserId
         }));
         // Fetch messages
-        const res = await fetch(`http://localhost:3001/api/messages/chat/${chatId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/messages/chat/${chatId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

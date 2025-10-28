@@ -5,6 +5,10 @@
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+// Debug: Log the API URL being used
+console.log('🌐 API Base URL:', API_BASE_URL);
+console.log('🔧 Environment:', process.env.NODE_ENV);
+
 /**
  * Refresh the access token using the refresh token
  * @returns {Promise<string|null>} New access token or null if refresh fails
