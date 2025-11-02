@@ -4,12 +4,37 @@
   left: 0;
   right: 0;
   max-width: 640px;
-  margin: 0 auto;
+  margin: auto;
+  margin-bottom: 1%;
   display: flex;
   background: var(--card-background);
   border-top: 1px solid var(--border-color);
+  border-radius: 20px;
   box-shadow: 0 -2px 10px var(--shadow);
   z-index: 100;
+}
+
+/* When inside left-panel on wide screens */
+@media (min-width: 900px) {
+  .left-panel .bottom-tab-bar {
+    position: static;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+  }
+}
+
+/* Hide on wide screens by default, show in left-panel */
+@media (min-width: 900px) {
+  .bottom-tab-bar {
+    display: none;
+  }
+
+  .left-panel .bottom-tab-bar {
+    display: flex;
+  }
 }
 
 .tab-btn {

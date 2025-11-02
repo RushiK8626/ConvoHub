@@ -19,9 +19,11 @@ const OTPVerification = () => {
   const socketRef = useRef(null);
   const verifiedRef = useRef(false);
   const type = location.state?.type || 'login';
-  // Get username and userId from navigation state
+  // Get username and userId from navigation state or from URL query param (uid)
   const username = location.state?.username || '';
-  const userId = location.state?.userId || null;
+  const params = new URLSearchParams(location.search);
+  const rawUserId = location.state?.userId ?? params.get('uid') ?? null;
+  const userId = rawUserId != null ? Number(rawUserId) : null;
   const { refreshAuth } = useContext(AuthContext);
 
   // Initialize WebSocket connection for registration monitoring
@@ -93,7 +95,7 @@ const OTPVerification = () => {
     socket.on('connect', () => {
       console.log('Login WebSocket connected:', socket.id);
       // Start monitoring this login OTP
-      socket.emit('monitor_login', { userId });
+      socket.emit('monitor_login', { userId: Number(userId) });
     });
 
     socket.on('monitoring_started', (data) => {
@@ -140,6 +142,8 @@ const OTPVerification = () => {
   }, [timer]);
 
   useEffect(() => {
+    // Debug: log incoming navigation state to help trace reset flow
+    console.debug('OTPVerification mounted', { state: location.state, queryUid: params.get('uid'), resolvedUserId: userId, type });
     inputRefs.current[0]?.focus();
   }, []);
 
@@ -176,6 +180,8 @@ const OTPVerification = () => {
   };
 
   const [error, setError] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -202,6 +208,71 @@ const OTPVerification = () => {
       return;
     }
 
+    // For password reset flow, verify OTP together with new password by calling reset API
+    if (type === 'reset') {
+      if (!userId) {
+        showToast('Session not found. Please request password reset again.', 'error');
+        navigate('/forgot-password');
+        return;
+      }
+
+      const otpString = otp.join('');
+      if (otpString.length !== 6) {
+        setError('Please enter the 6-digit code.');
+        showToast('Please enter the complete 6-digit code.', 'error');
+        return;
+      }
+
+      if (!newPassword || newPassword.length < 6) {
+        setError('Please enter a password of at least 6 characters.');
+        showToast('Please enter a password of at least 6 characters.', 'error');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError('Passwords do not match.');
+        showToast('Passwords do not match.', 'error');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+        const endpoint = `${API_URL}/api/auth/reset-password`;
+        const body = { userId, otpCode: otpString, newPassword };
+        // Diagnostic log: show payload and endpoint so it's easy to verify the request in the browser console
+        console.debug('Reset password POST', { endpoint, body });
+        showToast('Resetting password...', 'info');
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          // Clear persisted userId since reset is complete
+          try { sessionStorage.removeItem('passwordResetUserId'); } catch (e) { /* ignore */ }
+          showToast(data.message || 'Password reset successful. Please login.', 'success');
+          // disconnect socket if present
+          if (socketRef.current && socketRef.current.connected) {
+            socketRef.current.disconnect();
+          }
+          setTimeout(() => navigate('/login'), 1500);
+        } else {
+          showToast(data.error || data.message || 'Failed to reset password', 'error');
+          setTimeout(() => navigate('/forgot-password'), 1200);
+        }
+      } catch (err) {
+        console.error('Reset password error:', err);
+        showToast('Unable to reset password. Try again later.', 'error');
+        setTimeout(() => navigate('/forgot-password'), 1200);
+      } finally {
+        setLoading(false);
+      }
+
+      return;
+    }
+
     setLoading(true);
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -213,7 +284,7 @@ const OTPVerification = () => {
       
       const requestBody = type === 'register'
         ? { username: username, otpCode: otpString }
-        : { userId: userId, otpCode: otpString };
+        : { userId: Number(userId), otpCode: otpString };
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -300,7 +371,7 @@ const OTPVerification = () => {
       
       const requestBody = type === 'register'
         ? { username: username }
-        : { userId: userId, otpType: 'login' };
+        : { userId: Number(userId), otpType: 'login' };
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -370,7 +441,7 @@ const OTPVerification = () => {
           </div>
           <h1>Verification Code</h1>
           <p>
-            We've sent a verification code to your {type === 'register' ? 'email and mobile' : 'registered contact'}
+            We've sent a verification code to your {type === 'register' ? 'email and mobile' : type === 'reset' ? 'email' : 'registered contact'}
           </p>
         </div>
 
@@ -391,12 +462,42 @@ const OTPVerification = () => {
             ))}
           </div>
 
+          {type === 'reset' && (
+            <div className="reset-password-fields">
+              <div className="form-group">
+                <label htmlFor="newPassword">New password</label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm password</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             className="btn-primary btn-verify"
-            disabled={otp.join('').length !== 6 || loading}
+            disabled={
+              loading ||
+              otp.join('').length !== 6 ||
+              (type === 'reset' && (newPassword.length < 6 || newPassword !== confirmPassword))
+            }
           >
-            {loading ? 'Verifying...' : 'Verify & Continue'}
+            {loading ? (type === 'reset' ? 'Resetting...' : 'Verifying...') : (type === 'reset' ? 'Reset Password' : 'Verify & Continue')}
           </button>
         </form>
 

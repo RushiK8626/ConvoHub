@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--background-color);
 }
 
 /* Feedback message for login (OTP sent, errors, etc.) */
@@ -29,22 +29,14 @@
   text-align: center;
   border: 1px solid #b3e5fc;
 }
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
 
 .login-card {
-  background: white;
+  background: var(--card-background);
   border-radius: 20px;
   padding: 40px 32px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px var(--shadow);
 }
 
 .login-header {
@@ -73,7 +65,7 @@
 
 .login-header h1 {
   font-size: 28px;
-  color: #333;
+  color: var(--text-color);
   margin-bottom: 8px;
   font-weight: 700;
 }
@@ -107,7 +99,7 @@
 .input-icon {
   position: absolute;
   left: 14px;
-  color: #999;
+  color: var(--accent-color);
   pointer-events: none;
 }
 
@@ -120,14 +112,15 @@
   box-sizing: border-box;
   font-size: 16px;
   height: 48px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #fff;
+  background: var(--input-background);
   margin-bottom: 0;
   transition: border 0.2s;
+  color: var(--text-color);
 }
 .input-wrapper input:focus {
-  border-color: #667eea;
+  border-color: var(--accent-color);
   outline: none;
 }
 
@@ -142,11 +135,31 @@
   display: flex;
   align-items: center;
   transition: color 0.3s ease;
+  z-index: 2; /* ensure custom toggle sits above native decorations */
 }
 
 .password-toggle:hover {
-  color: #667eea;
+  color: var(--accent-color);
 }
+
+/* Hide native password reveal & clear buttons (IE/Edge/Blink/WebKit) so only our custom toggle shows */
+input[type="password"]::-ms-clear,
+input[type="password"]::-ms-reveal {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Blink/WebKit: attempt to hide built-in password reveal/decoration inside the input's shadow DOM */
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none !important;
+  -webkit-appearance: none !important;
+}
+
+/* Ensure the input wrapper remains positioned so the toggle can overlap reliably */
+.input-wrapper { position: relative; }
 
 .input-field.error {
   border-color: #ff4757;
@@ -182,20 +195,20 @@
 }
 
 .forgot-password {
-  color: #667eea;
+  color: var(--accent-color);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .forgot-password:hover {
-  color: #764ba2;
+  color: var(--accent-color);
 }
 
 .btn-primary {
   width: 100%;
   margin-top: 8px;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent-color);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -214,7 +227,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(90deg, #5a67d8 0%, #6b47b6 100%);
+  background: var(--accent-color);
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.12);
 }
 
@@ -230,14 +243,14 @@
 }
 
 .register-link {
-  color: #667eea;
+  color: var(--accent-color);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .register-link:hover {
-  color: #764ba2;
+  color: var(--accent-color);
 }
 
 @media (max-width: 480px) {

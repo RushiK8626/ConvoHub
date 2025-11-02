@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, Search, Plus, MoreVertical } from 'lucide-react';
 import BottomTabBar from '../components/BottomTabBar';
 import ChatInfoModal from '../components/ChatInfoModal';
+import ChatOptionsMenu from '../components/ChatOptionsMenu';
+import CreateGroupModal from '../components/CreateGroupModal';
+import ChatWindow from './ChatWindow';
 import { formatChatPreviewTime } from '../utils/dateUtils';
 import socketService from '../utils/socket';
 import './ChatHome.css';
@@ -25,6 +28,20 @@ const ChatHome = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showChatInfoModal, setShowChatInfoModal] = useState(false);
   const [selectedChatInfo, setSelectedChatInfo] = useState(null);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [selectedChatId, setSelectedChatId] = useState(null);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
+    // Try to get saved width from localStorage, default to 360
+    try {
+      const saved = localStorage.getItem('chatHomeLeftPanelWidth');
+      return saved ? parseInt(saved) : 360;
+    } catch (e) {
+      return 360;
+    }
+  });
+  const containerRef = useRef(null);
+  const isResizingRef = useRef(false);
 
   // Function to fetch user profile by user_id
   const fetchUserProfile = async (otherUserId) => {
@@ -168,6 +185,22 @@ const ChatHome = () => {
     (chat.chat_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Close options menu when clicking outside
+  useEffect(() => {
+    if (!showOptionsMenu) return;
+
+    const handleClickOutside = (e) => {
+      const menu = document.querySelector('.chat-options-menu');
+      const btn = document.querySelector('.new-chat-btn');
+      if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+        setShowOptionsMenu(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showOptionsMenu]);
+
   // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
@@ -208,17 +241,128 @@ const ChatHome = () => {
       fetchChatsUpdate();
     };
 
+    // Listen for user online/offline status to update chat list
+    const handleUserOnline = ({ user_id }) => {
+      console.log(`🟢 User ${user_id} online - updating chats`);
+      setChats(prevChats => 
+        prevChats.map(chat => {
+          if (chat.chat_type === 'private' && chat.members) {
+            const other = chat.members.find(m => m.user_id !== userId);
+            if (other && other.user_id === user_id) {
+              return {
+                ...chat,
+                members: chat.members.map(m => 
+                  m.user_id === user_id ? { ...m, is_online: true } : m
+                )
+              };
+            }
+          }
+          return chat;
+        })
+      );
+    };
+
+    const handleUserOffline = ({ user_id, lastSeen }) => {
+      console.log(`🔴 User ${user_id} offline - updating chats`);
+      setChats(prevChats => 
+        prevChats.map(chat => {
+          if (chat.chat_type === 'private' && chat.members) {
+            const other = chat.members.find(m => m.user_id !== userId);
+            if (other && other.user_id === user_id) {
+              return {
+                ...chat,
+                members: chat.members.map(m => 
+                  m.user_id === user_id ? { ...m, is_online: false, last_seen: lastSeen } : m
+                )
+              };
+            }
+          }
+          return chat;
+        })
+      );
+    };
+
     socketService.onNewMessage(handleNewMessage);
+    socketService.onUserOnline(handleUserOnline);
+    socketService.onUserOffline(handleUserOffline);
 
     return () => {
-      socketService.off('new_message', handleNewMessage);
+      const socket = socketService.getSocket();
+      if (socket) {
+        socket.off('new_message', handleNewMessage);
+        socket.off('user_online', handleUserOnline);
+        socket.off('user_offline', handleUserOffline);
+      }
     };
   }, [userId]);
 
+  // Handle column resize
+  useEffect(() => {
+    const handleMouseDown = (e) => {
+      // Only start resize if click is on the divider (right edge of left-panel)
+      if (!containerRef.current) return;
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const rightEdge = rect.left + leftPanelWidth;
+      
+      if (Math.abs(e.clientX - rightEdge) < 5) { // 5px tolerance for click area
+        isResizingRef.current = true;
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isResizingRef.current || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      let newWidth = e.clientX - rect.left;
+      
+      // Min width: 320px, Max width: 650px
+      newWidth = Math.max(320, Math.min(newWidth, 650));
+      setLeftPanelWidth(newWidth);
+      // Save to localStorage
+      try {
+        localStorage.setItem('chatHomeLeftPanelWidth', newWidth.toString());
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+    };
+
+    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
+      document.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousedown', handleMouseDown);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [leftPanelWidth]);
 
   const handleChatClick = (chatId) => {
-    navigate(`/chat/${chatId}`);
+    // On small screens, navigate to chat page. On wide screens, open inline.
+    if (typeof window !== 'undefined' && window.innerWidth < 900) {
+      navigate(`/chat/${chatId}`);
+    } else {
+      setSelectedChatId(chatId);
+    }
   };
+
+  // Keep selectedChatId in sync with URL when user navigates directly (on mobile or deep link)
+  useEffect(() => {
+    const path = location.pathname || '';
+    const match = path.match(/\/chat\/(\d+)/);
+    if (match && typeof window !== 'undefined' && window.innerWidth < 900) {
+      // Only sync on small screens - otherwise just set from URL
+      setSelectedChatId(match[1]);
+    }
+  }, [location.pathname]);
 
   const handleChatAvatarClick = (e, chat) => {
     e.stopPropagation(); // Prevent navigation to chat
@@ -242,9 +386,27 @@ const ChatHome = () => {
   };
 
   const handleNewChat = () => {
+    setShowOptionsMenu(!showOptionsMenu);
+  };
+
+  const handleNewChatWithUser = () => {
+    setShowOptionsMenu(false);
     setShowNewChatModal(true);
     setSearchUsers('');
     setSearchResults([]);
+  };
+
+  const handleCreateNewGroup = () => {
+    setShowOptionsMenu(false);
+    setShowCreateGroupModal(true);
+  };
+
+  const handleGroupCreated = (newChatId) => {
+    setShowCreateGroupModal(false);
+    // Close the options menu if open
+    setShowOptionsMenu(false);
+    // Navigate to the new group chat
+    navigate(`/chat/${newChatId}`);
   };
 
   // Debounced search function
@@ -379,27 +541,34 @@ const ChatHome = () => {
 
   return (
     <div className="chat-home">
-      <div className="chat-home-header">
-        <div className="header-top">
-          <h1>ConvoHub</h1>
-          <button className="more-btn">
-            <MoreVertical size={24} />
-          </button>
-        </div>
-        <div className="search-bar">
-          <Search className="search-icon" size={20} />
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-      </div>
+      <div 
+        className="chat-home-container"
+        ref={containerRef}
+        style={typeof window !== 'undefined' && window.innerWidth >= 900 ? {
+          gridTemplateColumns: `${leftPanelWidth}px 1fr`
+        } : {}}
+      >
+        <div className="left-panel">
+          <div className="chat-home-header">
+            <div className="header-top">
+              <h1>ConvoHub</h1>
+              <button className="more-btn">
+                <MoreVertical size={24} />
+              </button>
+            </div>
+            <div className="search-bar">
+              <Search className="search-icon" size={20} />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
 
-
-      <div className="chat-list">
+          <div className="chat-list">
         {loading ? (
           <div className="no-chats"><p>Loading chats...</p></div>
         ) : error ? (
@@ -442,7 +611,7 @@ const ChatHome = () => {
             return (
               <div
                 key={chat.chat_id}
-                className="chat-item"
+                className={`chat-item ${selectedChatId === chat.chat_id ? 'selected' : ''}`}
                 onClick={() => handleChatClick(chat.chat_id)}
               >
                 <div 
@@ -485,11 +654,26 @@ const ChatHome = () => {
         )}
       </div>
 
-      <button className="new-chat-btn" onClick={handleNewChat}>
+          <button className="new-chat-btn" onClick={handleNewChat}>
         <Plus size={24} />
       </button>
 
-      {showNewChatModal && (
+          <BottomTabBar activeTab="chats" />
+        </div>
+
+        <div className="right-panel">
+          {selectedChatId ? (
+            <ChatWindow chatId={selectedChatId} isEmbedded={true} />
+          ) : (
+            <div className="chat-placeholder">
+              <p>Select a conversation to start chatting</p>
+            </div>
+          )}
+        </div>
+
+  </div>
+
+  {showNewChatModal && (
         <div className="modal-overlay" onClick={() => setShowNewChatModal(false)}>
           <div className="new-chat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -567,7 +751,21 @@ const ChatHome = () => {
         otherUserId={selectedChatInfo?.otherUserId}
       />
 
-      <BottomTabBar activeTab="chats" />
+      {/* Chat Options Menu */}
+      <ChatOptionsMenu
+        isOpen={showOptionsMenu}
+        onNewChat={handleNewChatWithUser}
+        onNewGroup={handleCreateNewGroup}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onGroupCreated={handleGroupCreated}
+        currentUserId={userId}
+      />
+
     </div>
   );
 };

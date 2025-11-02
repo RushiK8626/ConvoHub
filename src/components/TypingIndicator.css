@@ -1,0 +1,166 @@
+/* Typing Indicator Styles - WhatsApp Style */
+
+.typing-indicator-container {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 28px;
+}
+
+.typing-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Animated Dots */
+.typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+}
+
+.typing-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #999;
+  animation: typingAnimation 1.4s infinite;
+  display: inline-block;
+}
+
+.typing-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Animation: Bounce effect */
+@keyframes typingAnimation {
+  0% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+}
+
+/* Alternative: Fade effect */
+@keyframes typingFade {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Alternative: Pulse effect */
+@keyframes typingPulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* You can uncomment to use fade instead of bounce */
+/* .typing-dots .dot {
+  animation: typingFade 1.4s infinite;
+} */
+
+/* Or use pulse instead */
+/* .typing-dots .dot {
+  animation: typingPulse 1.4s infinite;
+} */
+
+/* Multiple users typing - show bubble style */
+.typing-indicator-container.multiple-users {
+  background-color: #f0f0f0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.typing-indicator-container.multiple-users .typing-text {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Typing indicator in message bubble style */
+.typing-bubble {
+  background-color: #e5e5ea;
+  padding: 10px 14px;
+  border-radius: 18px;
+  width: fit-content;
+  max-width: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.typing-bubble .dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .typing-text {
+    color: #aaa;
+  }
+
+  .typing-dots .dot {
+    background-color: #aaa;
+  }
+
+  .typing-indicator-container.multiple-users {
+    background-color: #2c2c2c;
+  }
+
+  .typing-indicator-container.multiple-users .typing-text {
+    color: #ccc;
+  }
+
+  .typing-bubble {
+    background-color: #3a3a3f;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .typing-indicator-container {
+    padding: 6px 0;
+    min-height: 24px;
+  }
+
+  .typing-text {
+    font-size: 12px;
+  }
+
+  .typing-dots .dot {
+    width: 5px;
+    height: 5px;
+  }
+}

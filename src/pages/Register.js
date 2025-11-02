@@ -102,9 +102,6 @@ const Register = () => {
     <div className="register-container">
       <div className="register-card fade-in">
         <div className="register-header">
-          <div className="logo">
-            <div className="logo-icon">💬</div>
-          </div>
           <h1>Create Account</h1>
           <p>Join ConvoHub and start connecting</p>
         </div>

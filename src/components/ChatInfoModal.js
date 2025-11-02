@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ChatInfoModal.css';
 
 const ChatInfoModal = ({ 
@@ -8,10 +9,12 @@ const ChatInfoModal = ({
   chatType, 
   otherUserId 
 }) => {
+  const navigate = useNavigate();
   const [chatDetails, setChatDetails] = useState(null);
   const [loadingChatDetails, setLoadingChatDetails] = useState(false);
   const [chatImageUrl, setChatImageUrl] = useState(null);
   const [profilePicUrl, setProfilePicUrl] = useState(null);
+  const [membersImages, setMembersImages] = useState({});
 
   // Function to fetch chat image with token
   const fetchChatImage = async (imagePath) => {
@@ -52,6 +55,25 @@ const ChatInfoModal = ({
       }
     } catch (err) {
       console.error('Error fetching profile pic:', err);
+    }
+  };
+
+  // Fetch and cache member profile images (for group members list)
+  const fetchMemberProfilePic = async (member) => {
+    if (!member || !member.profile_pic) return;
+    try {
+      const token = localStorage.getItem('accessToken');
+      const filename = member.profile_pic.split('/uploads/').pop();
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setMembersImages(prev => ({ ...prev, [member.user_id]: blobUrl }));
+      }
+    } catch (err) {
+      console.error('Error fetching member profile pic:', err);
     }
   };
 
@@ -109,6 +131,14 @@ const ChatInfoModal = ({
           if (data.chat_image) {
             fetchChatImage(data.chat_image);
           }
+            // If members present, fetch profile pics for each member
+            if (Array.isArray(data.members)) {
+              data.members.forEach((m) => {
+                if (m && m.profile_pic) {
+                  fetchMemberProfilePic(m);
+                }
+              });
+            }
         } else {
           console.error('Failed to fetch group chat info:', res.status, res.statusText);
         }
@@ -182,8 +212,21 @@ const ChatInfoModal = ({
     return () => {
       if (chatImageUrl) URL.revokeObjectURL(chatImageUrl);
       if (profilePicUrl) URL.revokeObjectURL(profilePicUrl);
+      // revoke member images
+      Object.values(membersImages).forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) { }
+      });
     };
-  }, [chatImageUrl, profilePicUrl]);
+  }, [chatImageUrl, profilePicUrl, membersImages]);
+
+  // When membersImages mapping updates, revoke any previous URLs that were replaced
+  useEffect(() => {
+    return () => {
+      Object.values(membersImages).forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) { }
+      });
+    };
+  }, [membersImages]);
 
   // Get initials from display name
   const getInitials = (name) => {
@@ -193,6 +236,17 @@ const ChatInfoModal = ({
       return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+
+  // Format last seen timestamp into a readable string
+  const formatLastSeen = (iso) => {
+    if (!iso) return 'Unknown';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch (e) {
+      return iso;
+    }
   };
 
   if (!isOpen) return null;
@@ -246,6 +300,22 @@ const ChatInfoModal = ({
                 <div className="info-section">
                   <h3>{chatDetails.user.full_name || chatDetails.user.username}</h3>
                   <p className="info-username">@{chatDetails.user.username}</p>
+                  {/* Presence info */}
+                  <div className="info-status" style={{ marginTop: 8 }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        backgroundColor: chatDetails.user.is_online ? '#4CAF50' : '#bdbdbd',
+                        marginRight: 8,
+                      }}
+                    />
+                    <span className="status-text" style={{ fontSize: 14, color: 'var(--text-color, #333)' }}>
+                      {chatDetails.user.is_online ? 'Online' : `Last seen: ${formatLastSeen(chatDetails.user.last_seen)}`}
+                    </span>
+                  </div>
                 </div>
                 
                 {chatDetails.user.status_message && (
@@ -286,6 +356,43 @@ const ChatInfoModal = ({
                 <div className="info-section">
                   <label>Members</label>
                   <p>{chatDetails.chat.member_count || 0} members</p>
+
+                  {/* Members list */}
+                  <div className="members-list">
+                    {Array.isArray(chatDetails.chat.members) && chatDetails.chat.members.length > 0 ? (
+                      chatDetails.chat.members.map((m) => (
+                        <div key={m.user_id} className="member-item" onClick={() => { onClose(); navigate(`/user/${m.user_id}`); }} style={{ cursor: 'pointer' }}>
+                          <div className="member-avatar">
+                            {membersImages[m.user_id] ? (
+                              <img src={membersImages[m.user_id]} alt={m.full_name || m.username} />
+                            ) : (
+                              <div className="member-initials">{getInitials(m.full_name || m.username)}</div>
+                            )}
+                          </div>
+                          <div className="member-info">
+                            <div className="member-name">{m.full_name || m.username}</div>
+                            <div className="member-username">@{m.username}</div>
+                            {/* Member presence */}
+                            <div className="member-presence" style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  backgroundColor: m.is_online ? '#4CAF50' : '#bdbdbd',
+                                  marginRight: 6,
+                                }}
+                              />
+                              <span>{m.is_online ? 'Online' : `Last seen: ${formatLastSeen(m.last_seen)}`}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="small">No members data</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="info-section">

@@ -9,20 +9,34 @@ import {
   Image,
   File,
   Check,
-  CheckCheck
+  CheckCheck,
+  X,
+  Loader
 } from 'lucide-react';
 import ChatInfoModal from '../components/ChatInfoModal';
+import AttachmentPreview from '../components/AttachmentPreview';
+import ToastContainer from '../components/ToastContainer';
+import TypingIndicator from '../components/TypingIndicator';
+import { useToast } from '../hooks/useToast';
 import { formatMessageTime, formatLastSeen } from '../utils/dateUtils';
 import socketService from '../utils/socket';
+import { getFileLogo, isImageFile, formatFileSize } from '../utils/fileLogos';
 import './ChatWindow.css';
 
-const ChatWindow = () => {
-  const { chatId } = useParams();
+const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) => {
+  const params = useParams();
+  const chatId = propChatId || params?.chatId;
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [messageText, setMessageText] = useState('');
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showMessageMenu, setShowMessageMenu] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showFilePreview, setShowFilePreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const { toasts, showError, showSuccess, removeToast } = useToast();
 
 
   // Get userId from localStorage
@@ -166,6 +180,15 @@ const ChatWindow = () => {
           }
         }
         
+        console.log('[🔵 INITIAL FETCH] Online status loaded for chat:', {
+          chatId,
+          chatType,
+          otherUserId,
+          is_online: isOnline,
+          last_seen: lastSeen,
+          timestamp: new Date().toISOString()
+        });
+        
         setChatInfo((info) => ({
           ...info,
           name: chatName,
@@ -237,35 +260,39 @@ const ChatWindow = () => {
 
     // Listen for new messages
     const handleNewMessage = (message) => {
-      console.log('📩 New message received:', message);
       setMessages(prevMessages => {
-        // Check if message already exists by message_id
-        const exists = prevMessages.some(m => m.message_id === message.message_id && !m.isOptimistic);
-        if (exists) {
-          console.log('⚠️ Message already exists, skipping');
-          return prevMessages;
-        }
+        // Check if this is a real message (has message_id that's a number, not temp)
+        const isRealMessage = message.message_id && !message.message_id.toString().startsWith('temp');
         
-        // Remove optimistic message(s) with matching content
-        const filteredMessages = prevMessages.filter(m => {
-          // If it's not an optimistic message, keep it
-          if (!m.isOptimistic) return true;
-          
-          // Remove optimistic message if content matches the new real message
-          const isSameMessage = (
-            m.sender_id === message.sender_id &&
-            m.message_text === message.message_text &&
-            m.chat_id === message.chat_id
+        if (isRealMessage) {
+          // Check if we already have this real message (avoid duplicates)
+          const existingRealMessage = prevMessages.some(
+            m => m.message_id === message.message_id && !m.isOptimistic
           );
-          
-          if (isSameMessage) {
-            console.log('✅ Replacing optimistic message with real message');
+          if (existingRealMessage) {
+            console.log('⚠️ Real message already exists, skipping');
+            return prevMessages;
           }
+
+          // Find and remove the matching optimistic message by tempId
+          const filteredMessages = prevMessages.filter(m => {
+            // If it's not an optimistic message, keep it
+            if (!m.isOptimistic) return true;
+            
+            // Remove optimistic message if tempId matches
+            if (m.tempId === message.tempId) {
+              console.log(`✅ Replacing optimistic message (tempId: ${message.tempId}) with real message (id: ${message.message_id})`);
+              return false; // Remove this optimistic message
+            }
+            
+            return true; // Keep this optimistic message
+          });
           
-          return !isSameMessage; // Remove if it matches
-        });
-        
-        return [...filteredMessages, message];
+          return [...filteredMessages, message];
+        } else {
+          // If it's an optimistic message, just add it
+          return [...prevMessages, message];
+        }
       });
 
       // Fetch user profile if needed
@@ -276,58 +303,162 @@ const ChatWindow = () => {
 
     // Listen for typing indicators
     const handleUserTyping = ({ userId: typingUserId, userName }) => {
+      console.log('[⌨️ TYPING EVENT] user_typing received:', {
+        typingUserId,
+        userName,
+        currentUserId: userId,
+        isOtherUser: typingUserId !== userId,
+        timestamp: new Date().toISOString()
+      });
+
       if (typingUserId !== userId) {
         setTypingUsers(prev => {
-          if (!prev.some(u => u.userId === typingUserId)) {
-            return [...prev, { userId: typingUserId, userName }];
+          const alreadyTyping = prev.some(u => u.userId === typingUserId);
+          console.log('[⌨️ STATE] user_typing state update:', {
+            action: alreadyTyping ? 'SKIP_DUPLICATE' : 'ADD_USER',
+            typingUserId,
+            userName,
+            currentTypingUsers: prev.length,
+            newTypingUsers: alreadyTyping ? prev.length : prev.length + 1,
+            timestamp: new Date().toISOString()
+          });
+
+          if (!alreadyTyping) {
+            const updated = [...prev, { userId: typingUserId, userName }];
+            console.log('[⌨️ UPDATE] New typingUsers array:', updated);
+            return updated;
           }
           return prev;
         });
+      } else {
+        console.log('[⌨️ SKIP] Ignored typing event from self');
       }
     };
 
     const handleUserStoppedTyping = ({ userId: typingUserId }) => {
-      setTypingUsers(prev => prev.filter(u => u.userId !== typingUserId));
+      console.log('[⌨️ STOPPED EVENT] user_stopped_typing received:', {
+        typingUserId,
+        currentUserId: userId,
+        timestamp: new Date().toISOString()
+      });
+
+      setTypingUsers(prev => {
+        const wasTyping = prev.some(u => u.userId === typingUserId);
+        console.log('[⌨️ STATE] user_stopped_typing state update:', {
+          wasTyping,
+          typingUserId,
+          currentTypingUsers: prev.length,
+          newTypingUsers: wasTyping ? prev.length - 1 : prev.length,
+          timestamp: new Date().toISOString()
+        });
+
+        if (wasTyping) {
+          const updated = prev.filter(u => u.userId !== typingUserId);
+          console.log('[⌨️ UPDATE] Removed typingUserId, new array:', updated);
+          return updated;
+        }
+        return prev;
+      });
+    };
+
+    // Listen for user online event
+    const handleUserOnline = ({ user_id, username, full_name, status }) => {
+      setChatInfo(prev => {
+        if (prev.otherUserId === user_id) {
+          return {
+            ...prev,
+            is_online: true,
+            last_seen: null
+          };
+        }
+        return prev;
+      });
+    };
+
+    // Listen for user offline event
+    const handleUserOffline = ({ user_id, username, lastSeen }) => {
+      setChatInfo(prev => {
+        if (prev.otherUserId === user_id) {
+          return {
+            ...prev,
+            is_online: false,
+            last_seen: lastSeen
+          };
+        }
+        return prev;
+      });
     };
 
     // Listen for user online status updates
     const handleUserOnlineStatus = ({ userId: statusUserId, isOnline, lastSeen }) => {
-      if (chatInfo.otherUserId === statusUserId) {
-        setChatInfo(prev => ({
-          ...prev,
-          is_online: isOnline,
-          last_seen: lastSeen
-        }));
-      }
+      setChatInfo(prev => {
+        if (prev.otherUserId === statusUserId) {
+          return {
+            ...prev,
+            is_online: isOnline,
+            last_seen: lastSeen
+          };
+        }
+        return prev;
+      });
     };
 
-    // Remove any existing listeners first to prevent duplicates
-    if (socket) {
-      socket.off('new_message');
-      socket.off('user_typing');
-      socket.off('user_stopped_typing');
-      socket.off('user_online_status');
-    }
+    // Listen for file upload progress updates from server
+    const handleFileUploadProgress = (progressData) => {
+      const { progress, tempId } = progressData;
+      console.log(`📊 Server Progress: ${progress}%`);
+      setUploadProgress(progress);
+    };
 
-    // Add new listeners
-    socketService.onNewMessage(handleNewMessage);
-    socketService.onUserTyping(handleUserTyping);
-    socketService.onUserStoppedTyping(handleUserStoppedTyping);
-    socketService.onUserOnlineStatus(handleUserOnlineStatus);
+    // Listen for file upload success from server
+    const handleFileUploadSuccess = (messageData) => {
+      console.log('✅ File upload success event received:', messageData);
+      // The new_message listener will handle adding the persisted message
+      // This event confirms the file was saved to database
+    };
+
+    // Add listeners
+    socket.on('new_message', handleNewMessage);
+    socket.on('user_typing', handleUserTyping);
+    socket.on('user_stopped_typing', handleUserStoppedTyping);
+    socket.on('user_online', handleUserOnline);
+    socket.on('user_offline', handleUserOffline);
+    socket.on('user_online_status', handleUserOnlineStatus);
+    socket.on('file_upload_progress_update', handleFileUploadProgress);
+    socket.on('file_upload_success', handleFileUploadSuccess);
 
     console.log('✅ Socket listeners registered for chat:', chatId);
+    console.log('[⌨️ LISTENER] Registered listeners:', [
+      'new_message',
+      'user_typing',
+      'user_stopped_typing',
+      'user_online',
+      'user_offline',
+      'user_online_status',
+      'file_upload_progress_update',
+      'file_upload_success'
+    ]);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - MUST remove listeners with same callback reference
     return () => {
       console.log('🧹 Cleaning up socket listeners for chat:', chatId);
+      console.log('[🧹 CLEANUP] Removing all socket listeners');
+      
       socketService.leaveChat(chatId);
-      const socket = socketService.getSocket();
+      
       if (socket) {
+        // Remove each listener with the exact callback reference
         socket.off('new_message', handleNewMessage);
         socket.off('user_typing', handleUserTyping);
         socket.off('user_stopped_typing', handleUserStoppedTyping);
+        socket.off('user_online', handleUserOnline);
+        socket.off('user_offline', handleUserOffline);
         socket.off('user_online_status', handleUserOnlineStatus);
+        socket.off('file_upload_progress_update', handleFileUploadProgress);
+        socket.off('file_upload_success', handleFileUploadSuccess);
       }
+      
+      console.log('✅ Socket listeners cleaned up for chat:', chatId);
     };
     // eslint-disable-next-line
   }, [chatId, userId]);
@@ -335,6 +466,28 @@ const ChatWindow = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Debug effect to monitor chatInfo changes
+  useEffect(() => {
+    console.log('[📊 MONITOR] chatInfo changed:', {
+      id: chatInfo.id,
+      name: chatInfo.name,
+      is_online: chatInfo.is_online,
+      last_seen: chatInfo.last_seen,
+      otherUserId: chatInfo.otherUserId,
+      chat_type: chatInfo.chat_type,
+      timestamp: new Date().toISOString()
+    });
+  }, [chatInfo]);
+
+  // Debug effect to monitor typing users changes
+  useEffect(() => {
+    console.log('[⌨️ TYPING MONITOR] typingUsers array changed:', {
+      count: typingUsers.length,
+      users: typingUsers.map(u => ({ userId: u.userId, userName: u.userName })),
+      timestamp: new Date().toISOString()
+    });
+  }, [typingUsers]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -354,20 +507,24 @@ const ChatWindow = () => {
     }
     socketService.sendStoppedTyping(chatId, userId);
 
-    // Send message via Socket.IO
+    // Generate temporary ID for tracking the message
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+
+    // Send message via Socket.IO with tempId
     const messageData = {
       chat_id: parseInt(chatId),
       sender_id: userId,
       message_text: messageToSend,
-      message_type: 'text'
+      message_type: 'text',
+      tempId: tempId // Include tempId so server can send it back
     };
 
     socketService.sendMessage(messageData);
 
     // Optimistically add message to UI with a unique temporary ID
-    const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticMessage = {
       message_id: tempId, // Temporary unique ID
+      tempId: tempId,
       ...messageData,
       created_at: new Date().toISOString(),
       sender: {
@@ -385,7 +542,16 @@ const ChatWindow = () => {
 
   // Handle typing indicator
   const handleTyping = useCallback(() => {
-    if (!socketService.isSocketConnected()) return;
+    if (!socketService.isSocketConnected()) {
+      console.log('[⌨️ SEND] Socket not connected, cannot send typing event');
+      return;
+    }
+
+    console.log('[⌨️ SEND] Emitting typing event:', {
+      chatId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
 
     socketService.sendTyping(chatId, userId);
 
@@ -396,13 +562,182 @@ const ChatWindow = () => {
 
     // Set new timeout to stop typing indicator after 2 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
+      console.log('[⌨️ SEND STOPPED] Emitting stopped_typing event:', {
+        chatId,
+        userId,
+        timestamp: new Date().toISOString()
+      });
       socketService.sendStoppedTyping(chatId, userId);
     }, 2000);
   }, [chatId, userId]);
 
   const handleAttachment = (type) => {
     setShowAttachMenu(false);
-    alert(`${type} attachment - Connect to your backend`);
+    
+    if (type === 'Image') {
+      fileInputRef.current.accept = 'image/*';
+    } else if (type === 'File') {
+      fileInputRef.current.accept = '*/*';
+    }
+    
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('File size exceeds 50MB limit');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Store file for later sending
+    setSelectedFile(file);
+    setShowFilePreview(true);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setShowFilePreview(false);
+  };
+
+  const handleSendWithAttachment = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      
+      // Generate temporary ID for tracking the message
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64File = reader.result.split(',')[1]; // Get only the base64 part
+        
+        // Simulate progress updates with chunks
+        const chunkSize = 1024 * 50; // 50KB chunks for progress updates
+        let uploaded = 0;
+
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+          const progress = Math.min(100, (uploaded / selectedFile.size) * 100);
+          setUploadProgress(progress);
+          uploaded += chunkSize;
+          
+          if (progress >= 100) {
+            clearInterval(progressInterval);
+          }
+        }, 150);
+
+        // Prepare file message data
+        const fileMessageData = {
+          chat_id: parseInt(chatId),
+          message_text: messageText.trim() || '',
+          fileBuffer: base64File,
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+          tempId: tempId
+        };
+
+        console.log('📤 Sending file message via WebSocket:', {
+          chat_id: fileMessageData.chat_id,
+          fileName: fileMessageData.fileName,
+          fileSize: fileMessageData.fileSize,
+          fileType: fileMessageData.fileType,
+          message_text: fileMessageData.message_text
+        });
+
+        // Add optimistic message to UI immediately
+        const optimisticMessage = {
+          message_id: tempId,
+          tempId: tempId,
+          isOptimistic: true,
+          sender_id: userId,
+          message_text: fileMessageData.message_text,
+          chat_id: parseInt(chatId),
+          attachments: [
+            {
+              file_url: '',
+              fileName: selectedFile.name,
+              file_name: selectedFile.name,
+              fileSize: selectedFile.size,
+              file_size: selectedFile.size,
+              fileType: selectedFile.type,
+              file_type: selectedFile.type,
+              original_filename: selectedFile.name
+            }
+          ],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_read: false,
+          deleted_at: null
+        };
+
+        setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+
+        // Send via WebSocket
+        socketService.sendFileMessage(fileMessageData);
+
+        // Clear states after sending
+        setSelectedFile(null);
+        setShowFilePreview(false);
+        setMessageText('');
+        setUploading(false);
+        setUploadProgress(0);
+        
+        // Show success toast
+        showSuccess('File sent successfully!');
+      };
+
+      reader.onerror = () => {
+        setUploading(false);
+        setUploadProgress(0);
+        throw new Error('Failed to read file');
+      };
+
+      reader.readAsDataURL(selectedFile);
+    } catch (err) {
+      console.error('❌ File upload error:', err);
+      
+      // Parse error message for better user feedback
+      let errorMessage = 'File upload failed';
+      const errorStr = err.message || err.toString();
+      
+      if (errorStr.includes('read file')) {
+        errorMessage = 'Failed to read file';
+      } else if (errorStr.includes('not supported')) {
+        errorMessage = 'File type not supported';
+      } else if (errorStr.includes('too large') || errorStr.includes('exceeds')) {
+        errorMessage = 'File is too large';
+      } else {
+        errorMessage = errorStr;
+      }
+      
+      // Remove the selected file and close preview
+      setSelectedFile(null);
+      setShowFilePreview(false);
+      setUploading(false);
+      setUploadProgress(0);
+      
+      // Show error toast
+      showError(errorMessage, 4000);
+    }
   };
 
   const handleMessageAction = (action, messageId) => {
@@ -447,10 +782,20 @@ const ChatWindow = () => {
 
   return (
     <div className="chat-window">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
       <div className="chat-window-header">
-        <button className="back-btn" onClick={() => navigate('/chats')}>
-          <ArrowLeft size={24} />
-        </button>
+        {!isEmbedded && (
+          <button className="back-btn" onClick={() => navigate('/chats')}>
+            <ArrowLeft size={24} />
+          </button>
+        )}
         <div className="header-info" onClick={handleShowChatInfo} style={{ cursor: 'pointer' }}>
           {chatInfo.otherUserId && userProfiles[chatInfo.otherUserId]?.profile_pic ? (
             <div className="chat-avatar-small" style={{ position: 'relative' }}>
@@ -528,16 +873,30 @@ const ChatWindow = () => {
                     setShowMessageMenu(message.message_id);
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', maxWidth: '80%' }}>
-                    <div className="message-bubble">
-                      {message.message_type === 'image' && message.attachments && message.attachments.length > 0 && (
-                        <img src={message.attachments[0].file_url} alt="attachment" className="message-image" />
-                      )}
-                      <p className="message-text">{message.message_text}</p>
-                      <div className="message-meta">
-                        <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', maxWidth: '80%', flexDirection: 'column', gap: '8px' }}>
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                        {message.attachments.map((att, idx) => (
+                          <AttachmentPreview key={(att.file_url || att.fileUrl || att.url || idx) + idx} attachment={att} />
+                        ))}
                       </div>
-                    </div>
+                    )}
+                    {message.message_text && (
+                      <div className="message-bubble">
+                        <p className="message-text">{message.message_text}</p>
+                        <div className="message-meta">
+                          <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                        </div>
+                      </div>
+                    )}
+                    {!message.message_text && !message.attachments && (
+                      <div className="message-bubble">
+                        <p className="message-text">Empty message</p>
+                        <div className="message-meta">
+                          <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                        </div>
+                      </div>
+                    )}
                     {showMessageMenu === message.message_id && (
                       <div className="message-menu">
                         <button onClick={() => handleMessageAction('mark-read', message.message_id)}>
@@ -590,27 +949,51 @@ const ChatWindow = () => {
                     }}
                   />
                 )}
-                <div style={{ flex: 1 }}>
-                  <div className="message-bubble">
-                    {isGroup && (
-                      <div
-                        className="message-sender clickable"
-                        style={{ fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 2, cursor: 'pointer' }}
-                        onClick={() => {/* Placeholder for future action */}}
-                      >
-                        {message.sender_id && userProfiles[message.sender_id]?.full_name
-                          ? userProfiles[message.sender_id].full_name
-                          : message.sender?.full_name || message.sender?.username || 'Unknown User'}
-                      </div>
-                    )}
-                    {message.message_type === 'image' && message.attachments && message.attachments.length > 0 && (
-                      <img src={message.attachments[0].file_url} alt="attachment" className="message-image" />
-                    )}
-                    <p className="message-text">{message.message_text}</p>
-                    <div className="message-meta">
-                      <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '70%' }}>
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {message.attachments.map((att, idx) => (
+                        <AttachmentPreview key={(att.file_url || att.fileUrl || att.url || idx) + idx} attachment={att} />
+                      ))}
                     </div>
-                  </div>
+                  )}
+                  {message.message_text && (
+                    <div className="message-bubble">
+                      {isGroup && (
+                        <div
+                          className="message-sender clickable"
+                          style={{ fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 2, cursor: 'pointer' }}
+                          onClick={() => {/* Placeholder for future action */}}
+                        >
+                          {message.sender_id && userProfiles[message.sender_id]?.full_name
+                            ? userProfiles[message.sender_id].full_name
+                            : message.sender?.full_name || message.sender?.username || 'Unknown User'}
+                        </div>
+                      )}
+                      <p className="message-text">{message.message_text}</p>
+                      <div className="message-meta">
+                        <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                      </div>
+                    </div>
+                  )}
+                  {!message.message_text && message.attachments && message.attachments.length > 0 && (
+                    <div className="message-bubble">
+                      {isGroup && (
+                        <div
+                          className="message-sender clickable"
+                          style={{ fontSize: 13, fontWeight: 500, color: '#555', marginBottom: 2, cursor: 'pointer' }}
+                          onClick={() => {/* Placeholder for future action */}}
+                        >
+                          {message.sender_id && userProfiles[message.sender_id]?.full_name
+                            ? userProfiles[message.sender_id].full_name
+                            : message.sender?.full_name || message.sender?.username || 'Unknown User'}
+                        </div>
+                      )}
+                      <div className="message-meta">
+                        <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                      </div>
+                    </div>
+                  )}
                   {showMessageMenu === message.message_id && (
                     <div className="message-menu">
                       <button onClick={() => handleMessageAction('mark-read', message.message_id)}>
@@ -625,18 +1008,6 @@ const ChatWindow = () => {
                 </div>
               </div>
             );
-/* Add this CSS to your ChatWindow.css for avatar if not present:
-.message-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 8px;
-  margin-top: 2px;
-  background: #eee;
-  flex-shrink: 0;
-}
-*/
           })
         )}
         <div ref={messagesEndRef} />
@@ -648,6 +1019,7 @@ const ChatWindow = () => {
             <button
               className="attach-option"
               onClick={() => handleAttachment('Image')}
+              disabled={uploading}
             >
               <Image size={24} />
               <span>Image</span>
@@ -655,6 +1027,7 @@ const ChatWindow = () => {
             <button
               className="attach-option"
               onClick={() => handleAttachment('File')}
+              disabled={uploading}
             >
               <File size={24} />
               <span>File</span>
@@ -662,11 +1035,92 @@ const ChatWindow = () => {
           </div>
         )}
 
-        <form onSubmit={handleSendMessage} className="message-input-form">
+        {/* File Preview Section */}
+        {showFilePreview && selectedFile && (
+          <div className="file-preview-container">
+            {isImageFile(selectedFile.name, selectedFile.type) ? (
+              // Image preview
+              <div className="file-preview-image">
+                <img 
+                  src={URL.createObjectURL(selectedFile)} 
+                  alt={selectedFile.name}
+                />
+                <button
+                  type="button"
+                  className="remove-file-btn"
+                  onClick={handleRemoveFile}
+                  disabled={uploading}
+                  title="Remove file"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            ) : (
+              // File card with logo
+              <div className="file-preview-card">
+                <div className="file-logo-wrapper">
+                  <img 
+                    src={getFileLogo(selectedFile.name, selectedFile.type)}
+                    alt={selectedFile.name}
+                    className="file-logo"
+                  />
+                </div>
+                <div className="file-card-info">
+                  <div className="file-name" title={selectedFile.name}>
+                    {selectedFile.name}
+                  </div>
+                  <div className="file-size">
+                    {formatFileSize(selectedFile.size)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="remove-file-btn-card"
+                  onClick={handleRemoveFile}
+                  disabled={uploading}
+                  title="Remove file"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Upload Progress Bar */}
+        {uploading && (
+          <div className="upload-progress-container">
+            <div className="upload-progress-bar">
+              <div 
+                className="upload-progress-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <span className="upload-progress-text">
+              <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              {Math.round(uploadProgress)}%
+            </span>
+          </div>
+        )}
+
+        {/* Message Input */}
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (selectedFile) {
+              handleSendWithAttachment();
+            } else {
+              handleSendMessage(e);
+            }
+          }} 
+          className="message-input-form"
+        >
           <button
             type="button"
             className="attach-btn"
             onClick={() => setShowAttachMenu(!showAttachMenu)}
+            disabled={uploading || selectedFile !== null}
+            title={selectedFile ? "Remove file first to select another" : "Attach file"}
           >
             <Paperclip size={22} />
           </button>
@@ -674,35 +1128,35 @@ const ChatWindow = () => {
           <input
             type="text"
             className="message-input"
-            placeholder="Type a message..."
+            placeholder={selectedFile ? "Add message (optional)" : "Type a message..."}
             value={messageText}
             onChange={(e) => {
               setMessageText(e.target.value);
               handleTyping();
             }}
+            disabled={uploading}
           />
 
-          <button type="button" className="emoji-btn">
+          <button 
+            type="button" 
+            className="emoji-btn"
+            disabled={uploading}
+          >
             <Smile size={22} />
           </button>
 
           <button
             type="submit"
             className="send-btn"
-            disabled={!messageText.trim()}
+            disabled={uploading || (!messageText.trim() && !selectedFile)}
           >
             <Send size={22} />
           </button>
         </form>
 
         {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <div className="typing-indicator">
-            {typingUsers.length === 1 
-              ? `${typingUsers[0].userName || 'Someone'} is typing...`
-              : `${typingUsers.length} people are typing...`
-            }
-          </div>
+        {typingUsers.length > 0 && !selectedFile && (
+          <TypingIndicator typingUsers={typingUsers} />
         )}
       </div>
 
@@ -723,6 +1177,9 @@ const ChatWindow = () => {
         chatType="private"
         otherUserId={selectedUserId}
       />
+      
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

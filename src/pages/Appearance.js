@@ -4,9 +4,17 @@ import { ArrowLeft, Sun, Moon, Check } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import './Appearance.css';
 
+const ACCENT_COLORS = [
+  { id: 'blue', label: 'Blue', value: '#007AFF' },
+  { id: 'red', label: 'Red', value: '#FF3B30' },
+  { id: 'orange', label: 'Orange', value: '#FF9500' },
+  { id: 'green', label: 'Green', value: '#34C759' },
+  { id: 'purple', label: 'Purple', value: '#AF52DE' },
+];
+
 const Appearance = () => {
   const navigate = useNavigate();
-  const { theme, setLightTheme, setDarkTheme } = useTheme();
+  const { theme, setLightTheme, setDarkTheme, accent, setAccent } = useTheme();
 
   const themeOptions = [
     {
@@ -29,6 +37,10 @@ const Appearance = () => {
     } else {
       setDarkTheme();
     }
+  };
+
+  const handleAccentSelect = (accentId) => {
+    setAccent(accentId);
   };
 
   return (
@@ -74,6 +86,31 @@ const Appearance = () => {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        <div className="appearance-section">
+          <h2 className="section-title">Accent Color</h2>
+          <p className="section-description">Choose your accent color for highlights and buttons.</p>
+          <div className="theme-options">
+            {ACCENT_COLORS.map((option) => (
+              <button
+                key={option.id}
+                className={`theme-option ${accent === option.id ? 'selected' : ''}`}
+                style={{ borderColor: accent === option.id ? option.value : undefined }}
+                onClick={() => handleAccentSelect(option.id)}
+              >
+                <div className="theme-option-icon" style={{ background: option.value }} />
+                <div className="theme-option-info">
+                  <h3>{option.label}</h3>
+                </div>
+                {accent === option.id && (
+                  <div className="theme-option-check">
+                    <Check size={20} />
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 

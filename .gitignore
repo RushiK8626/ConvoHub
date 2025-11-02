@@ -8,8 +8,14 @@
 # testing
 /coverage
 
+
 # production
 /build
+
+# uploads folder - store separately on production servers
+/uploads/*
+uploads/*
+/public/uploads/*
 
 # misc
 .DS_Store
@@ -23,3 +29,4 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.vercel

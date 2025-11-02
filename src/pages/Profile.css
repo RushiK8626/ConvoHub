@@ -28,7 +28,7 @@
 .save-btn {
   background: none;
   border: none;
-  color: var(--header-text-color);
+  color: var(--accent-color);
   cursor: pointer;
   padding: 8px;
   display: flex;
@@ -58,7 +58,7 @@
   position: relative;
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -143,4 +143,23 @@
   .avatar-emoji-large {
     font-size: 52px;
   }
+}
+
+.status-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.online-badge {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #39d353; /* green */
+  display: inline-block;
+}
+
+.last-seen {
+  color: var(--text-secondary);
+  font-size: 13px;
 }

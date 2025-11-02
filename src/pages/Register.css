@@ -4,66 +4,145 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* Match auth two-accent gradient */
+  background: var(--background-color);
 }
 
 .register-card {
-  background: white;
-  border-radius: 20px;
-  padding: 40px;
+  background: var(--card-background);
+  border-radius: 16px;
+  /* reduced padding to make the card smaller vertically */
+  padding: 20px 20px;
   width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-height: 90vh;
-  overflow-y: auto;
+  /* slightly narrower card so content is denser */
+  max-width: 420px;
+  box-shadow: 0 16px 40px var(--shadow);
+  /* allow natural height (remove forced max-height/scroll) so form fits without internal scroll */
+  max-height: none;
+  overflow: visible;
+}
+
+/* Hide scrollbar but keep scrolling functional for register card */
+.register-card {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.register-card::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .register-header {
   text-align: center;
-  margin-bottom: 30px;
+  /* reduce vertical gap */
+  margin-bottom: 16px;
 }
 
 .register-header h1 {
-  font-size: 28px;
-  color: #333;
-  margin-bottom: 8px;
+  font-size: 24px;
+  color: var(--text-color);
+  margin-bottom: 6px;
   font-weight: 700;
 }
 
 .register-header p {
-  color: #666;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .register-form {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+}
+
+/* Reduce vertical spacing between inputs to make the form denser */
+.register-form .form-group {
+  margin-bottom: 8px;
+}
+
+.register-form .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-color);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.register-form .input-wrapper {
+  position: relative;
+}
+
+.register-form .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-color);
+  pointer-events: none;
+  font-size: 18px;
+}
+
+.register-form .input-wrapper input,
+.register-form input[type="text"],
+.register-form input[type="email"],
+.register-form input[type="password"],
+.register-form input,
+.register-form select,
+.register-form textarea {
+  height: 44px;
+  /* leave space on the left for the icon */
+  padding-left: 44px;
+  padding-right: 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+  color: var(--text-color);
 }
 
 .btn-register {
   width: 100%;
   margin-top: 8px;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-register:hover:not(:disabled) {
+  background: var(--accent-color);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.12);
 }
 
 .register-footer {
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-color);
 }
 
 .register-footer p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .login-link {
-  color: #667eea;
+  color: var(--accent-color);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .login-link:hover {
-  color: #764ba2;
+  color: var(--accent-color);
 }
 
 @media (max-width: 480px) {

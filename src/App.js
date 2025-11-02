@@ -4,9 +4,12 @@ import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import OTPVerification from './pages/OTPVerification';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import ChatHome from './pages/ChatHome';
 import ChatWindow from './pages/ChatWindow';
 import Profile from './pages/Profile';
+import UserProfile from './pages/UserProfile';
 import Settings from './pages/Settings';
 import Appearance from './pages/Appearance';
 import BlockedUsers from './pages/BlockedUsers';
@@ -35,9 +38,12 @@ function App() {
               <Route path="/login" element={!hasToken ? <Login /> : <Navigate to="/chats" />} />
               <Route path="/register" element={!hasToken ? <Register /> : <Navigate to="/chats" />} />
               <Route path="/verify-otp" element={<OTPVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/chats" element={hasToken ? <ChatHome /> : <Navigate to="/login" />} />
               <Route path="/chat/:chatId" element={hasToken ? <ChatWindow /> : <Navigate to="/login" />} />
               <Route path="/profile" element={hasToken ? <Profile /> : <Navigate to="/login" />} />
+              <Route path="/user/:userId" element={hasToken ? <UserProfile /> : <Navigate to="/login" />} />
               <Route path="/settings" element={hasToken ? <Settings /> : <Navigate to="/login" />} />
               <Route path="/appearance" element={hasToken ? <Appearance /> : <Navigate to="/login" />} />
               <Route path="/blocked-users" element={hasToken ? <BlockedUsers /> : <Navigate to="/login" />} />

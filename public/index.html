@@ -25,6 +25,27 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>ConvoHub - Chat Messaging App</title>
+    <script>
+      // Apply theme immediately to prevent flash
+      (function() {
+        try {
+          const theme = localStorage.getItem('theme') || 'light';
+          const accentId = localStorage.getItem('accentColor') || 'blue';
+          const accentMap = {
+            blue: '#007AFF',
+            red: '#FF3B30',
+            orange: '#FF9500',
+            green: '#34C759',
+            purple: '#AF52DE',
+          };
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.setProperty('--accent-color', accentMap[accentId] || accentMap.blue);
+          document.documentElement.style.setProperty('--primary-color', accentMap[accentId] || accentMap.blue);
+          document.documentElement.style.setProperty('--message-sent-bg', accentMap[accentId] || accentMap.blue);
+          document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

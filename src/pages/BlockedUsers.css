@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--accent-color);
   color: white;
 }
 
@@ -63,7 +63,7 @@
 .blocked-user-avatar {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+  background: var(--accent-color);
   border-radius: 50%;
   display: flex;
   align-items: center;

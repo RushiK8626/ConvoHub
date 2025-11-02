@@ -47,6 +47,7 @@ const handleSubmit = async (e) => {
         },
         body: JSON.stringify({
           username: formData.username,
+          email: formData.username,
           password: formData.password,
         }),
       });
@@ -81,9 +82,6 @@ const handleSubmit = async (e) => {
     <div className="login-container">
       <div className="login-card fade-in">
         <div className="login-header">
-          <div className="logo">
-            <div className="logo-icon">💬</div>
-          </div>
           <h1>Welcome to ConvoHub</h1>
           <p>Sign in to continue your conversations</p>
         </div>

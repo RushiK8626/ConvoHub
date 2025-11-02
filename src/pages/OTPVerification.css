@@ -4,16 +4,16 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--background-color);
 }
 
 .otp-card {
-  background: white;
+  background: var(--card-background);
   border-radius: 20px;
   padding: 40px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px var(--shadow);
 }
 
 .otp-header {
@@ -41,13 +41,13 @@
 
 .otp-header h1 {
   font-size: 28px;
-  color: #333;
+  color: var(--text-color);
   margin-bottom: 12px;
   font-weight: 700;
 }
 
 .otp-header p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -60,52 +60,80 @@
   display: flex;
   gap: 12px;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .otp-input {
   width: 56px;
   height: 56px;
   text-align: center;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  transition: all 0.18s ease;
+  background: var(--input-background);
+  color: var(--text-color);
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: var(--accent-color);
+}
+
+.otp-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .otp-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  transform: scale(1.05);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 6px rgba(10,132,255,0.06);
+  transform: translateY(-2px);
 }
 
-.btn-verify {
+/* Reset/new-password inputs shown on same page */
+.reset-password-fields .form-group {
+  margin-bottom: 12px;
+}
+
+.reset-password-fields .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.reset-password-fields .form-group input {
   width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--input-background);
+  color: var(--text-color);
+  box-sizing: border-box;
 }
 
-.btn-verify:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.reset-password-fields .form-group input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 6px 18px rgba(10,132,255,0.06);
 }
 
 .otp-footer {
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-color);
 }
 
 .timer-text {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .resend-btn {
   background: none;
   border: none;
-  color: #667eea;
+  color: var(--accent-color);
   font-weight: 600;
   cursor: pointer;
   font-size: 14px;
@@ -114,7 +142,12 @@
 }
 
 .resend-btn:hover {
-  color: #764ba2;
+  color: var(--accent-color);
+}
+
+/* ensure consistent hover color using theme accent */
+.resend-btn:hover {
+  color: var(--accent-color);
 }
 
 @media (max-width: 480px) {

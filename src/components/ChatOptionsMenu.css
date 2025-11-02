@@ -1,0 +1,143 @@
+.options-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chat-options-menu {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: var(--card-background);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px var(--shadow);
+  padding: 12px;
+  z-index: 950;
+  min-width: 280px;
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-color);
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.option-item:last-child {
+  margin-bottom: 0;
+}
+
+.option-item:hover {
+  background: var(--hover-background);
+  transform: translateX(4px);
+}
+
+.option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.option-item.new-chat .option-icon {
+  background: var(--accent-color);
+}
+
+.option-item.new-group .option-icon {
+  background: var(--accent-color);
+  opacity: 0.8;
+}
+
+.option-item:hover .option-icon {
+  transform: scale(1.1);
+}
+
+.option-text {
+  flex: 1;
+}
+
+.option-text h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.option-text p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.arrow {
+  color: var(--text-secondary);
+  font-size: 20px;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.option-item:hover .arrow {
+  color: var(--accent-color);
+  transform: translateX(4px);
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .chat-options-menu {
+    right: 16px;
+    min-width: 260px;
+  }
+
+  .option-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .option-text h3 {
+    font-size: 14px;
+  }
+
+  .option-text p {
+    font-size: 11px;
+  }
+}

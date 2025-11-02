@@ -42,6 +42,7 @@ const config = {
     },
     messages: {
       send: '/api/messages',
+      upload: '/api/messages/upload',
       markRead: (messageId) => `/api/messages/${messageId}/read`,
       delete: (messageId) => `/api/messages/${messageId}`,
     },
