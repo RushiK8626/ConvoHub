@@ -1,50 +1,29 @@
 .profile-page {
-  max-width: 640px;
-  margin: 0 auto;
   min-height: 100vh;
   background: var(--background-color);
   padding-bottom: 80px;
 }
 
-.profile-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: var(--header-background);
-  color: var(--header-text-color);
+@media (max-width: 899px) {
+  .profile-page {
+    max-width: 640px;
+    margin: 0 auto;
+  }
 }
 
-.profile-header h1 {
-  flex: 1;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--header-text-color);
-}
-
-.profile-header .back-btn,
-.edit-btn,
-.save-btn {
-  background: none;
-  border: none;
-  color: var(--accent-color);
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  border-radius: 50%;
-  transition: background 0.3s ease;
-}
-
-.profile-header .back-btn:hover,
-.edit-btn:hover,
-.save-btn:hover {
-  background: var(--avatar-bg);
+@media (min-width: 900px) {
+  .profile-page {
+    width: 100%;
+    padding-bottom: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .profile-content {
   animation: fadeIn 0.4s ease-out;
+  overflow-y: auto;
 }
 
 .profile-avatar-section {

@@ -65,6 +65,7 @@ export const ThemeProvider = ({ children }) => {
     root.style.setProperty('--accent-color', color);
     root.style.setProperty('--primary-color', color);
     root.style.setProperty('--message-sent-bg', color);
+    
     localStorage.setItem('accentColor', accent);
     
     // Trigger a reflow to ensure styles are applied

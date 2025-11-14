@@ -100,12 +100,12 @@ class SocketService {
         chat_id: typeof messageData.chat_id === 'string' ? parseInt(messageData.chat_id, 10) : messageData.chat_id,
         tempId: messageData.tempId // Ensure tempId is always passed
       };
-      console.log('📨 Sending message via socket:', dataToSend);
+      // console.log('📨 Sending message via socket:', dataToSend);
       
       // Use acknowledgment to ensure server received and saved the message
       this.socket.emit('send_message', dataToSend, (response) => {
         if (response && response.success) {
-          console.log('✅ Server confirmed message received and saved:', response.message_id);
+          // console.log('✅ Server confirmed message received and saved:', response.message_id);
         } else {
           console.error('❌ Server failed to save message:', response?.error || 'Unknown error');
         }
@@ -124,7 +124,7 @@ class SocketService {
       const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
       
       if (fileBuffer && fileBuffer.length > CHUNK_SIZE) {
-        console.log(`📦 Large file detected (${(fileSize / 1024 / 1024).toFixed(2)}MB), using chunked upload`);
+        // console.log(`📦 Large file detected (${(fileSize / 1024 / 1024).toFixed(2)}MB), using chunked upload`);
         this._sendFileMessageInChunks(fileMessageData);
       } else {
         console.log('📤 Sending file message via WebSocket:', {
@@ -139,7 +139,7 @@ class SocketService {
         // Use acknowledgment to ensure server received and saved the message
         this.socket.emit('send_file_message', fileMessageData, (response) => {
           if (response && response.success) {
-            console.log('✅ Server confirmed file message received and saved:', response.message_id);
+            // console.log('✅ Server confirmed file message received and saved:', response.message_id);
           } else {
             console.error('❌ Server failed to save file message:', response?.error || 'Unknown error');
           }
@@ -156,7 +156,7 @@ class SocketService {
     const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
     const totalChunks = Math.ceil(fileBuffer.length / CHUNK_SIZE);
     
-    console.log(`📤 Starting chunked upload: ${totalChunks} chunks of ${CHUNK_SIZE / 1024 / 1024}MB`);
+    // console.log(`📤 Starting chunked upload: ${totalChunks} chunks of ${CHUNK_SIZE / 1024 / 1024}MB`);
     
     // Send first chunk with metadata
     const firstChunk = fileBuffer.substring(0, CHUNK_SIZE);
@@ -175,7 +175,7 @@ class SocketService {
       isLastChunk: totalChunks === 1
     }, (response) => {
       if (response && response.success) {
-        console.log(`✅ Chunk 0/${totalChunks} confirmed`);
+        // console.log(`✅ Chunk 0/${totalChunks} confirmed`);
         
         // Send remaining chunks
         if (totalChunks > 1) {
@@ -193,7 +193,7 @@ class SocketService {
               isLastChunk: i === totalChunks - 1
             }, (chunkResponse) => {
               if (chunkResponse && chunkResponse.success) {
-                console.log(`✅ Chunk ${i}/${totalChunks} confirmed`);
+                // console.log(`✅ Chunk ${i}/${totalChunks} confirmed`);
               } else {
                 console.error(`❌ Chunk ${i} failed:`, chunkResponse?.error);
               }
@@ -210,6 +210,17 @@ class SocketService {
   onNewMessage(callback) {
     if (this.socket) {
       this.socket.on('new_message', callback);
+    }
+  }
+
+  deleteMessageForAll(messageId) {
+    if (this.socket && this.isConnected) {
+      console.log(`🗑️ Emitting delete_message_for_all for message: ${messageId}`);
+      this.socket.emit('delete_message_for_all', {
+        message_id: messageId
+      });
+    } else {
+      console.warn('⚠️ Cannot delete message - socket not connected');
     }
   }
 
@@ -236,7 +247,7 @@ class SocketService {
   // Send typing indicator
   sendTyping(chatId, userId) {
     if (this.socket && this.isConnected) {
-      console.log('[⌨️ SOCKET EMIT] Sending typing_start event:', { chatId, userId });
+      // console.log('[⌨️ SOCKET EMIT] Sending typing_start event:', { chatId, userId });
       this.socket.emit('typing_start', { chat_id: chatId, user_id: userId });
     } else {
       console.warn('[⌨️ SOCKET ERROR] Cannot send typing - socket not connected');
@@ -245,7 +256,7 @@ class SocketService {
 
   sendStoppedTyping(chatId, userId) {
     if (this.socket && this.isConnected) {
-      console.log('[⌨️ SOCKET EMIT] Sending typing_stop event:', { chatId, userId });
+      // console.log('[⌨️ SOCKET EMIT] Sending typing_stop event:', { chatId, userId });
       this.socket.emit('typing_stop', { chat_id: chatId, user_id: userId });
     } else {
       console.warn('[⌨️ SOCKET ERROR] Cannot send stopped_typing - socket not connected');
@@ -273,6 +284,20 @@ class SocketService {
     }
   }
 
+  // Listen for being added to a group
+  onAddedToGroup(callback) {
+    if (this.socket) {
+      this.socket.on('you_were_added_to_group', callback);
+    }
+  }
+
+  // Listen for being removed from a group
+  onRemovedFromGroup(callback) {
+    if (this.socket) {
+      this.socket.on('you_were_removed_from_group', callback);
+    }
+  }
+
   // Listen for file upload success
   onFileUploadSuccess(callback) {
     if (this.socket) {
@@ -284,6 +309,19 @@ class SocketService {
   markMessageAsRead(messageId, userId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('mark_read', { messageId, userId });
+    }
+  }
+
+  // Update message status (delivered/read)
+  updateMessageStatus(messageId, status) {
+    if (this.socket && this.isConnected) {
+      // console.log(`[📌 SOCKET EMIT] Updating message ${messageId} status to ${status}`);
+      this.socket.emit('update_message_status', { 
+        message_id: messageId, 
+        status: status 
+      });
+    } else {
+      console.warn('[📌 SOCKET ERROR] Cannot update message status - socket not connected');
     }
   }
 

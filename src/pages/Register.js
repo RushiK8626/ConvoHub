@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 import './Register.css';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,7 +74,7 @@ const Register = () => {
         const data = await response.json();
 
         if (response.ok) {
-          showToast('Registration successful! Please verify your OTP.', 'success');
+          showSuccess('Registration successful! Please verify your OTP.');
           // Navigate to OTP verification page
           navigate('/verify-otp', { 
             state: { 
@@ -81,20 +82,22 @@ const Register = () => {
               username: formData.username 
             } 
           });
+        } else if(response.status == 409) {
+          showError("Username or Email already exists.");
         } else {
-          showToast(data.message || 'Registration failed. Please try again.', 'error');
+          showError(data.message || 'Registration failed. Please try again.');
           setErrors({ submit: data.message || 'Registration failed' });
         }
       } catch (err) {
         console.error('Registration error:', err);
-        showToast('Unable to connect to server. Please try again later.', 'error');
+        showError('Unable to connect to server. Please try again later.');
         setErrors({ submit: 'Network error. Please try again.' });
       } finally {
         setLoading(false);
       }
     } else {
       setErrors(newErrors);
-      showToast('Please fill in all required fields correctly.', 'error');
+      // showError('Please fill in all required fields correctly.');
     }
   };
 
@@ -227,11 +230,11 @@ const Register = () => {
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>
           
-          {errors.submit && (
+          {/* {errors.submit && (
             <div className="error-message" style={{ marginTop: '10px', textAlign: 'center', color: '#ef4444' }}>
               {errors.submit}
             </div>
-          )}
+          )} */}
         </form>
 
         <div className="register-footer">
@@ -243,6 +246,7 @@ const Register = () => {
           </p>
         </div>
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

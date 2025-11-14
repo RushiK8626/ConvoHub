@@ -9,8 +9,8 @@ const BottomTabBar = ({ activeTab }) => {
 
   const tabs = [
     { id: 'chats', label: 'Chats', icon: MessageCircle, path: '/chats' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
+    // { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
+    // { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' }
   ];
 

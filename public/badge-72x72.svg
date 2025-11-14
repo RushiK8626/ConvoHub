@@ -1,0 +1,13 @@
+<!-- Badge Icon 72x72 - This is an SVG that will be served as a placeholder -->
+<!-- In production, replace with actual PNG file -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <defs>
+    <style>
+      .badge-bg { fill: #0099ff; }
+      .badge-fg { fill: white; }
+    </style>
+  </defs>
+  <circle class="badge-bg" cx="36" cy="36" r="36"/>
+  <circle class="badge-fg" cx="36" cy="36" r="30"/>
+  <path class="badge-bg" d="M36,18 L43,32 L57,34 L46,45 L49,59 L36,53 L23,59 L26,45 L15,34 L29,32 Z"/>
+</svg>

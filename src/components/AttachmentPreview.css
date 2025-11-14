@@ -83,7 +83,7 @@
 .attachment-name { 
   font-weight: 600;
   font-size: 14px;
-  color: var(--text-primary, #222);
+  color: var(--text-color, #222);
   word-break: break-word;
   white-space: nowrap;
   overflow: hidden;

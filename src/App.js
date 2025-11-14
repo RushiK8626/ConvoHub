@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login';
@@ -25,8 +25,13 @@ import './styles/theme.css';
 export const AuthContext = createContext({ refreshAuth: () => {} });
 
 function App() {
-  const [authTick, setAuthTick] = useState(0);
-  const refreshAuth = () => setAuthTick(t => t + 1);
+  const [authState, setAuthState] = useState(0); // Dummy state to trigger rerender
+  
+  const refreshAuth = () => {
+    // Force a rerender by updating a dummy state
+    setAuthState(prev => prev + 1);
+  };
+  
   const hasToken = !!localStorage.getItem('accessToken');
 
   return (

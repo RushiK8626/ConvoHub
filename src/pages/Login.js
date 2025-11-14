@@ -1,18 +1,20 @@
-
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 import './Login.css';
 
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
+  const { toasts, showSuccess, showError, showInfo, removeToast } = useToast();
 
   const handleChange = (e) => {
     setFormData({
@@ -37,6 +39,7 @@ const handleSubmit = async (e) => {
   const newErrors = validateForm();
 
   if (Object.keys(newErrors).length === 0) {
+    setLoading(true);
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
       
@@ -53,6 +56,7 @@ const handleSubmit = async (e) => {
       });
 
       if (response.ok) {
+        // showSuccess("OTP sent to your registered email");
         const data = await response.json();
         // Navigate to OTP verification with userId and other details
         navigate('/verify-otp', { 
@@ -64,15 +68,23 @@ const handleSubmit = async (e) => {
             expiresIn: data.expiresIn || 300
           } 
         });
-      } else {
+      } else if(response.status == 401) {
+        showError("Invalid Credentials. Login Failed");
+      }
+       else {
         const errData = await response.json();
+        showError("Login Failed. Please try again");
         setErrors({ api: errData.error || errData.message || 'Login failed. Please try again.' });
       }
     } catch (error) {
+      showError("Unable to connect to server. Please try again later.");
       setErrors({ api: 'Unable to connect to server. Please try again later.' });
       console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
   } else {
+    showError(newErrors);
     setErrors(newErrors);
   }
 };
@@ -80,6 +92,7 @@ const handleSubmit = async (e) => {
 
   return (
     <div className="login-container">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="login-card fade-in">
         <div className="login-header">
           <h1>Welcome to ConvoHub</h1>
@@ -87,7 +100,7 @@ const handleSubmit = async (e) => {
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          {errors.api && <div className="error-text" style={{ color: 'red', marginBottom: '16px', textAlign: 'center' }}>{errors.api}</div>}
+          {/* {errors.api && <div className="error-text" style={{ color: 'red', marginBottom: '16px', textAlign: 'center' }}>{errors.api}</div>} */}
           
           <div className="form-group">
             <label htmlFor="username">Username or Email</label>
@@ -140,8 +153,8 @@ const handleSubmit = async (e) => {
             </Link>
           </div>
 
-          <button type="submit" className="btn-primary btn-login">
-            Sign In
+          <button type="submit" className="btn-primary btn-login" disabled={loading}>
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
         </form>
 

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   UserRound,
   LockKeyhole,
   ShieldCheck,
@@ -14,25 +13,31 @@ import {
   Ban
 } from 'lucide-react';
 import BottomTabBar from '../components/BottomTabBar';
+import PageHeader from '../components/PageHeader';
 import Profile from './Profile';
 import Appearance from './Appearance';
 import BlockedUsers from './BlockedUsers';
+import { NotificationSettings } from '../components/NotificationSettings';
+import { unsubscribeFromPushNotifications } from '../utils/notification.utils';
+import { getSidebarWidth, setSidebarWidth, SIDEBAR_CONFIG } from '../utils/sidebarWidth';
 import './Settings.css';
 
-const Settings = () => {
+const Settings = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
   const [selectedSetting, setSelectedSetting] = useState(null);
   const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
-    // Try to get saved width from localStorage, default to 360
-    try {
-      const saved = localStorage.getItem('settingsLeftPanelWidth');
-      return saved ? parseInt(saved) : 360;
-    } catch (e) {
-      return 360;
-    }
+    // Get saved width from shared storage or use default
+    return getSidebarWidth();
   });
   const containerRef = useRef(null);
   const isResizingRef = useRef(false);
+  const [userData, setUserData] = useState(null);
+
+  // Get user data from localStorage
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserData(user);
+  }, []);
 
   const settingsSections = [
     {
@@ -77,8 +82,9 @@ const Settings = () => {
           id: 'notifications',
           icon: BellRing,
           label: 'Notifications',
-          action: () => alert('Notification settings - Connect to backend'),
-          description: 'Manage notification preferences'
+          description: 'Manage notification preferences',
+          component: NotificationSettings,
+          showComponentInline: true
         },
         {
           id: 'appearance',
@@ -115,7 +121,18 @@ const Settings = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const userId = user.user_id;
+      const token = localStorage.getItem('accessToken');
+      
       try {
+        // Unsubscribe from push notifications
+        if (token) {
+          await unsubscribeFromPushNotifications(token)
+            .catch((error) => {
+              console.error('Error unsubscribing from notifications:', error);
+            });
+        }
+        
+        // Logout from backend
         if (userId) {
           await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/auth/logout`, {
             method: 'POST',
@@ -125,6 +142,7 @@ const Settings = () => {
         }
       } catch (e) {
         // Optionally handle error
+        console.error('Logout error:', e);
       } finally {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -169,14 +187,10 @@ const Settings = () => {
       const rect = container.getBoundingClientRect();
       let newWidth = e.clientX - rect.left;
       
-      newWidth = Math.max(320, Math.min(newWidth, 650));
+      newWidth = Math.max(SIDEBAR_CONFIG.MIN_WIDTH, Math.min(newWidth, SIDEBAR_CONFIG.MAX_WIDTH));
       setLeftPanelWidth(newWidth);
-      // Save to localStorage
-      try {
-        localStorage.setItem('settingsLeftPanelWidth', newWidth.toString());
-      } catch (e) {
-        // Ignore localStorage errors
-      }
+      // Save to shared storage
+      setSidebarWidth(newWidth);
     };
 
     const handleMouseUp = () => {
@@ -197,23 +211,24 @@ const Settings = () => {
   }, [leftPanelWidth]);
 
   return (
-    <div className="settings-page">
+    <div className="settings-page" data-embedded={isEmbedded}>
       <div 
         className="settings-container"
         ref={containerRef}
-        style={typeof window !== 'undefined' && window.innerWidth >= 900 ? {
-          gridTemplateColumns: `${leftPanelWidth}px 1fr`
-        } : {}}
+        style={
+          !isEmbedded && typeof window !== 'undefined' && window.innerWidth >= 900 ? {
+            display: 'grid',
+            gridTemplateColumns: `${leftPanelWidth}px 1fr`
+          } : {}
+        }
       >
         {/* Left Panel - Settings Menu */}
         <div className="settings-left-panel">
-          <div className="settings-header">
-            <button className="back-btn" onClick={() => navigate('/chats')}>
-              <ArrowLeft size={24} />
-            </button>
-            <h1>Settings</h1>
-            <div style={{ width: 40 }}></div>
-          </div>
+          <PageHeader
+            title="Settings"
+            backgroundColor="var(--background-color)"
+            onBack={() => navigate('/chats')}
+          />
 
           <div className="settings-menu">
             {settingsSections.map((section, index) => (
@@ -263,7 +278,14 @@ const Settings = () => {
           {selectedSetting ? (
             <>
               {selectedSetting.component ? (
-                <selectedSetting.component isEmbedded={true} />
+                selectedSetting.id === 'notifications' ? (
+                  <selectedSetting.component 
+                    userId={userData?.id} 
+                    token={localStorage.getItem('accessToken')}
+                  />
+                ) : (
+                  <selectedSetting.component isEmbedded={true} />
+                )
               ) : selectedSetting.path ? (
                 <div className="settings-placeholder">
                   <p>Click to navigate to {selectedSetting.label}</p>

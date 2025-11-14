@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Ban, UserX } from 'lucide-react';
+import { UserX, Ban } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 import './BlockedUsers.css';
 
 const BlockedUsers = () => {
@@ -34,13 +35,11 @@ const BlockedUsers = () => {
 
   return (
     <div className="blocked-users-page">
-      <div className="blocked-users-header">
-        <button className="back-btn" onClick={() => navigate('/settings')}>
-          <ArrowLeft size={24} />
-        </button>
-        <h1>Blocked Users</h1>
-        <div style={{ width: 40 }}></div>
-      </div>
+      <PageHeader 
+        title="Blocked Users" 
+        onBack={() => navigate('/settings')}
+        // variant="accent"
+      />
 
       <div className="blocked-users-content">
         {blockedUsers.length > 0 ? (

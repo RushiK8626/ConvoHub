@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ChatInfoModal.css';
+import useContextMenu from '../hooks/useContextMenu';
+import ContextMenu from './ContextMenu';
+import { useToast } from '../hooks/useToast';
+import ConfirmationBox from './ConfirmationBox';
 
 const ChatInfoModal = ({ 
   isOpen, 
   onClose, 
   chatId, 
   chatType, 
-  otherUserId 
+  otherUserId,
+  onMemberClick
 }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const memberContextMenu = useContextMenu();
   const [chatDetails, setChatDetails] = useState(null);
   const [loadingChatDetails, setLoadingChatDetails] = useState(false);
   const [chatImageUrl, setChatImageUrl] = useState(null);
   const [profilePicUrl, setProfilePicUrl] = useState(null);
   const [membersImages, setMembersImages] = useState({});
+  const [selectedMemberForRemoval, setSelectedMemberForRemoval] = useState(null);
+  const [removingMemberId, setRemovingMemberId] = useState(null);
+  const [showRemovalConfirmation, setShowRemovalConfirmation] = useState(false);
+  const userId = JSON.parse(localStorage.getItem('user') || '{}').user_id;
 
   // Function to fetch chat image with token
   const fetchChatImage = async (imagePath) => {
@@ -60,17 +71,25 @@ const ChatInfoModal = ({
 
   // Fetch and cache member profile images (for group members list)
   const fetchMemberProfilePic = async (member) => {
-    if (!member || !member.profile_pic) return;
+    if (!member) return;
+    
+    // Extract user data - it could be nested under member.user or at member level
+    const memberUser = member.user || member;
+    const profilePic = memberUser.profile_pic;
+    const userId = member.user_id || memberUser.user_id;
+    
+    if (!profilePic || !userId) return;
+    
     try {
       const token = localStorage.getItem('accessToken');
-      const filename = member.profile_pic.split('/uploads/').pop();
+      const filename = profilePic.split('/uploads/').pop();
       const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/uploads/profiles/${filename}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (res.ok) {
         const blob = await res.blob();
         const blobUrl = URL.createObjectURL(blob);
-        setMembersImages(prev => ({ ...prev, [member.user_id]: blobUrl }));
+        setMembersImages(prev => ({ ...prev, [userId]: blobUrl }));
       }
     } catch (err) {
       console.error('Error fetching member profile pic:', err);
@@ -199,13 +218,120 @@ const ChatInfoModal = ({
     }
   };
 
+  // Show confirmation before removing member
+  const handleRemoveMemberClick = () => {
+    setShowRemovalConfirmation(true);
+    memberContextMenu.closeMenu();
+  };
+
+  // Actual remove member function
+  const handleRemoveMember = async () => {
+    if (!selectedMemberForRemoval || !chatId) return;
+
+    try {
+      setRemovingMemberId(selectedMemberForRemoval);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      let token = localStorage.getItem('accessToken');
+
+      let res = await fetch(
+        `${API_URL}/api/chats/${chatId}/members/${selectedMemberForRemoval}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Handle token refresh if unauthorized
+      if (res.status === 401) {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          try {
+            const refreshRes = await fetch(
+              `${API_URL}/api/auth/refresh-token`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken: String(refreshToken) }),
+              }
+            );
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              localStorage.setItem('accessToken', refreshData.accessToken);
+              token = refreshData.accessToken;
+
+              // Retry the request with new token
+              res = await fetch(
+                `${API_URL}/api/chats/${chatId}/members/${selectedMemberForRemoval}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                }
+              );
+            }
+          } catch (refreshErr) {
+            console.error('Token refresh failed:', refreshErr);
+          }
+        }
+      }
+
+      if (res.ok) {
+        showToast('Member removed successfully', 'success');
+        setShowRemovalConfirmation(false);
+        setSelectedMemberForRemoval(null);
+        
+        // Update chat details by removing the member from the list
+        setChatDetails(prev => {
+          if (!prev || !prev.chat) return prev;
+          return {
+            ...prev,
+            chat: {
+              ...prev.chat,
+              members: prev.chat.members.filter(m => {
+                const memberUserId = m.user_id || m.user?.user_id;
+                return memberUserId !== selectedMemberForRemoval;
+              }),
+            },
+          };
+        });
+      } else {
+        showToast('Failed to remove member', 'error');
+      }
+    } catch (err) {
+      console.error('Error removing member:', err);
+      showToast('Error removing member', 'error');
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
+
   // Fetch details when modal opens
   useEffect(() => {
+    // Only fetch if modal is open and we have valid parameters
     if (isOpen) {
-      fetchChatDetails();
+      // For group chats, we need chatType and chatId
+      if (chatType === 'group' && chatId) {
+        fetchChatDetails();
+      }
+      // For private chats, we need chatType and otherUserId
+      else if (chatType === 'private' && otherUserId) {
+        fetchChatDetails();
+      }
     }
     // eslint-disable-next-line
   }, [isOpen, chatId, chatType, otherUserId]);
+
+  // Reset confirmation state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowRemovalConfirmation(false);
+      setSelectedMemberForRemoval(null);
+      setRemovingMemberId(null);
+    }
+  }, [isOpen]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -231,11 +357,14 @@ const ChatInfoModal = ({
   // Get initials from display name
   const getInitials = (name) => {
     if (!name) return '?';
-    const words = name.trim().split(' ');
+    // Convert to string in case name is a number
+    const nameStr = String(name).trim();
+    if (!nameStr) return '?';
+    const words = nameStr.split(' ');
     if (words.length >= 2) {
       return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return nameStr.substring(0, 2).toUpperCase();
   };
 
   // Format last seen timestamp into a readable string
@@ -252,7 +381,15 @@ const ChatInfoModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onClick={() => {
+        // Don't close modal if context menu is open
+        if (!memberContextMenu.isOpen) {
+          onClose();
+        }
+      }}
+    >
       <div className="chat-info-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{chatType === 'group' ? 'Group Info' : 'Contact Info'}</h2>
@@ -355,40 +492,86 @@ const ChatInfoModal = ({
                 
                 <div className="info-section">
                   <label>Members</label>
-                  <p>{chatDetails.chat.member_count || 0} members</p>
+                  <p>{chatDetails.chat._count?.members || (Array.isArray(chatDetails.chat.members) ? chatDetails.chat.members.length : 0)} members</p>
 
                   {/* Members list */}
                   <div className="members-list">
                     {Array.isArray(chatDetails.chat.members) && chatDetails.chat.members.length > 0 ? (
-                      chatDetails.chat.members.map((m) => (
-                        <div key={m.user_id} className="member-item" onClick={() => { onClose(); navigate(`/user/${m.user_id}`); }} style={{ cursor: 'pointer' }}>
-                          <div className="member-avatar">
-                            {membersImages[m.user_id] ? (
-                              <img src={membersImages[m.user_id]} alt={m.full_name || m.username} />
-                            ) : (
-                              <div className="member-initials">{getInitials(m.full_name || m.username)}</div>
-                            )}
-                          </div>
-                          <div className="member-info">
-                            <div className="member-name">{m.full_name || m.username}</div>
-                            <div className="member-username">@{m.username}</div>
-                            {/* Member presence */}
-                            <div className="member-presence" style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: '50%',
-                                  backgroundColor: m.is_online ? '#4CAF50' : '#bdbdbd',
-                                  marginRight: 6,
-                                }}
-                              />
-                              <span>{m.is_online ? 'Online' : `Last seen: ${formatLastSeen(m.last_seen)}`}</span>
+                      (() => {
+                        const adminIds = Array.isArray(chatDetails.chat.admins) ? chatDetails.chat.admins.map(a => a.user_id) : [];
+                        return chatDetails.chat.members.map((m) => {
+                          // Extract user data - handle both nested and flat structures
+                          const memberUser = m.user || m;
+                          const memberUserId = m.user_id || memberUser.user_id;
+                          const fullName = memberUser.full_name || memberUser.username || `User ${memberUserId}`;
+                          const username = memberUser.username || '';
+                          const isOnline = memberUser.is_online || false;
+                          const lastSeen = memberUser.last_seen || null;
+                          const isAdmin = adminIds.includes(memberUserId);
+                          const currentUserIsAdmin = adminIds.includes(userId);
+
+                          // Handle right-click context menu
+                          const handleMemberContextMenu = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Only show context menu if current user is admin and member is not self
+                            if (currentUserIsAdmin && memberUserId !== userId) {
+                              setSelectedMemberForRemoval(memberUserId);
+                              memberContextMenu.handleContextMenu(e);
+                            }
+                          };
+
+                          return (
+                            <div 
+                              key={memberUserId} 
+                              className="member-item" 
+                              onClick={() => {
+                                // Don't close modal if context menu is open
+                                if (!memberContextMenu.isOpen) {
+                                  onClose();
+                                  // Use callback if provided (for split-layout), otherwise navigate
+                                  if (onMemberClick) {
+                                    onMemberClick(memberUserId);
+                                  } else {
+                                    navigate(`/user/${memberUserId}`);
+                                  }
+                                }
+                              }}
+                              onContextMenu={handleMemberContextMenu}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="member-avatar">
+                                {membersImages[memberUserId] ? (
+                                  <img src={membersImages[memberUserId]} alt={fullName} />
+                                ) : (
+                                  <div className="member-initials">{getInitials(fullName)}</div>
+                                )}
+                              </div>
+                              <div className="member-info">
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <div className="member-name">{fullName}</div>
+                                  {isAdmin && <span className="admin-badge">Admin</span>}
+                                </div>
+                                <div className="member-username">{username ? `@${username}` : ''}</div>
+                                {/* Member presence */}
+                                <div className="member-presence" style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                                  <span
+                                    style={{
+                                      display: 'inline-block',
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: '50%',
+                                      backgroundColor: isOnline ? '#4CAF50' : '#bdbdbd',
+                                      marginRight: 6,
+                                    }}
+                                  />
+                                  <span>{isOnline ? 'Online' : `Last seen: ${formatLastSeen(lastSeen)}`}</span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))
+                          );
+                        });
+                      })()
                     ) : (
                       <p className="small">No members data</p>
                     )}
@@ -408,6 +591,40 @@ const ChatInfoModal = ({
           </div>
         )}
       </div>
+
+      {/* Context Menu for member removal */}
+      <ContextMenu
+        isOpen={memberContextMenu.isOpen}
+        x={memberContextMenu.x}
+        y={memberContextMenu.y}
+        items={[
+          {
+            id: 'remove',
+            label: 'Remove Member',
+            icon: null,
+            color: 'danger',
+            onClick: handleRemoveMemberClick,
+            disabled: removingMemberId !== null,
+          },
+        ]}
+        onClose={memberContextMenu.closeMenu}
+      />
+
+      {/* Remove Member Confirmation */}
+      <ConfirmationBox
+        isOpen={showRemovalConfirmation}
+        title="Remove Member"
+        message="Are you sure you want to remove this member from the group? This action cannot be undone."
+        confirmText="Remove"
+        cancelText="Cancel"
+        isDangerous={true}
+        isLoading={removingMemberId !== null}
+        onConfirm={handleRemoveMember}
+        onCancel={() => {
+          setShowRemovalConfirmation(false);
+          setSelectedMemberForRemoval(null);
+        }}
+      />
     </div>
   );
 };

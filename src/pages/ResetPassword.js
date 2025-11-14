@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './ResetPassword.css';
 import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 
 const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { toasts, showError, showSuccess, removeToast } = useToast();
   // Allow userId from navigation state or query param (uid)
   const params = new URLSearchParams(location.search);
   const rawUserId = location.state?.userId ?? params.get('uid') ?? null;
@@ -20,16 +21,16 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userId || !otpCode) {
-      showToast('Session expired. Please request password reset again.', 'error');
+      showError('Session expired. Please request password reset again.');
       navigate('/forgot-password');
       return;
     }
     if (!password || password.length < 6) {
-      showToast('Please enter a password of at least 6 characters.', 'error');
+      showError('Please enter a password of at least 6 characters.');
       return;
     }
     if (password !== confirm) {
-      showToast('Passwords do not match.', 'error');
+      showError('Passwords do not match.');
       return;
     }
 
@@ -44,15 +45,15 @@ const ResetPassword = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'Password reset successfully. You can now login.', 'success');
+        showSuccess(data.message || 'Password reset successfully. You can now login.');
         setTimeout(() => navigate('/login'), 1500);
       } else {
-        showToast(data.error || data.message || 'Failed to reset password', 'error');
+        showError(data.error || data.message || 'Failed to reset password');
         setTimeout(() => navigate('/forgot-password'), 1200);
       }
     } catch (err) {
       console.error('Reset password error:', err);
-      showToast('Unable to reset password. Try again later.', 'error');
+      showError('Unable to reset password. Try again later.');
       setTimeout(() => navigate('/forgot-password'), 1200);
     } finally {
       setLoading(false);
@@ -75,6 +76,7 @@ const ResetPassword = () => {
           <button className="btn-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Reset password'}</button>
         </form>
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

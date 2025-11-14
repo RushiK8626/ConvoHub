@@ -46,6 +46,16 @@ const config = {
       markRead: (messageId) => `/api/messages/${messageId}/read`,
       delete: (messageId) => `/api/messages/${messageId}`,
     },
+    notifications: {
+      vapidPublicKey: '/api/notifications/vapid-public-key',
+      subscribe: '/api/notifications/subscribe',
+      unsubscribe: '/api/notifications/unsubscribe',
+      list: '/api/notifications',
+      unreadCount: '/api/notifications/unread-count',
+      markRead: (notificationId) => `/api/notifications/${notificationId}/read`,
+      markAllRead: '/api/notifications/read-all',
+      delete: (notificationId) => `/api/notifications/${notificationId}`,
+    },
   },
 };
 

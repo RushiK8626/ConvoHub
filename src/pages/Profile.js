@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Edit2, Save } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Camera, Edit2, Save } from 'lucide-react';
 import BottomTabBar from '../components/BottomTabBar';
+import PageHeader from '../components/PageHeader';
 import ToastContainer from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isEmbedded = location.state?.isEmbedded || false;
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -218,21 +221,27 @@ const Profile = () => {
   return (
     <div className="profile-page">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <div className="profile-header">
-        <button className="back-btn" onClick={() => navigate('/chats')}>
-          <ArrowLeft size={24} />
-        </button>
-        <h1>Profile</h1>
-        {!isEditing ? (
-          <button className="edit-btn" onClick={handleEdit}>
-            <Edit2 size={20} />
-          </button>
-        ) : (
-          <button className="save-btn" onClick={handleSave}>
-            <Save size={20} />
-          </button>
-        )}
-      </div>
+      <PageHeader 
+        title="Profile" 
+        onBack={() => {
+          if (isEmbedded) {
+            navigate(-1); // Go back to previous page in split layout
+          } else {
+            navigate('/chats');
+          }
+        }}
+        rightAction={
+          !isEditing ? (
+            <button className="edit-btn" onClick={handleEdit}>
+              <Edit2 size={20} />
+            </button>
+          ) : (
+            <button className="save-btn" onClick={handleSave}>
+              <Save size={20} />
+            </button>
+          )
+        }
+      />
 
       {loading ? (
         <div className="profile-content">
@@ -356,7 +365,7 @@ const Profile = () => {
         </div>
       )}
 
-      <BottomTabBar activeTab="profile" />
+      {!isEmbedded && <BottomTabBar activeTab="profile" />}
     </div>
   );
 };

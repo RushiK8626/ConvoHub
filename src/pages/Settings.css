@@ -1,42 +1,28 @@
 .settings-page {
-  max-width: 640px;
-  margin: 0 auto;
   min-height: 100vh;
   background: var(--background-color);
   padding-bottom: 80px;
-}
-
-.settings-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: var(--header-background);
-  color: var(--header-text-color);
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.settings-header h1 {
-  flex: 1;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--accent-color);
+/* When embedded as right panel in split layout, remove padding and use full height */
+.settings-page[data-embedded="true"] {
+  min-height: 100%;
+  height: 100%;
+  padding-bottom: 0;
 }
 
-.settings-header .back-btn {
-  background: none;
-  border: none;
-  color: var(--accent-color);
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  border-radius: 50%;
-  transition: background 0.3s ease;
+@media (max-width: 900px) {
+  .settings-page {
+    max-width: 640px;
+    margin: 0 auto;
+  }
 }
 
-.settings-header .back-btn:hover {
-  background: var(--avatar-bg);
+.settings-left-panel .PageHeader{
+
 }
 
 .settings-content {
@@ -65,15 +51,18 @@
 
 .setting-item {
   display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  background: none;
+  align-items: stretch;
+  padding: 12px 20px;
+  background: transparent;
   border: none;
   width: 100%;
   cursor: pointer;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  gap: 12px;
+  color: inherit;
+  font: inherit;
 }
 
 .setting-item:last-child {
@@ -81,12 +70,12 @@
 }
 
 .setting-item:hover {
-  background: var(--hover-background);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .setting-item:active {
-  background: var(--hover-background);
-  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 1;
 }
 
 .setting-icon {
@@ -98,35 +87,48 @@
   align-items: center;
   justify-content: center;
   color: var(--primary-color);
-  margin-right: 16px;
   flex-shrink: 0;
 }
 
 .setting-info {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
 }
 
 .setting-info h3 {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-color);
-  margin-bottom: 2px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  display: block;
+  word-break: break-word;
+  background: transparent;
 }
 
 .setting-info p {
   font-size: 13px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  word-break: break-word;
+  background: transparent;
 }
 
 .chevron-icon {
   color: var(--text-secondary);
   flex-shrink: 0;
-  margin-left: 8px;
 }
 
 .logout-btn {
@@ -237,11 +239,34 @@
     padding-bottom: 0;
   }
 
+  /* When embedded in split layout, hide left panel and show full right panel */
+  .settings-page[data-embedded="true"] {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .settings-page[data-embedded="true"] .settings-container {
+    display: block !important;
+    height: 100% !important;
+  }
+
+  .settings-page[data-embedded="true"] .settings-left-panel {
+    display: none !important;
+  }
+
+  .settings-page[data-embedded="true"] .settings-right-panel {
+    display: block !important;
+    height: 100% !important;
+    width: 100% !important;
+    min-width: unset !important;
+    overflow: auto;
+  }
+
   .settings-container {
     display: grid;
-    grid-template-columns: 360px 1fr;
     height: 100vh;
     position: relative;
+    width: 100%;
   }
 
   .settings-left-panel {
@@ -304,9 +329,10 @@
     height: 100vh;
     overflow: auto;
     background: var(--background-color);
-    min-width: 400px;
+    flex: 1;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    overflow-x: hidden;
   }
 
   .settings-right-panel::-webkit-scrollbar {
@@ -337,6 +363,14 @@
     background: var(--card-background);
     box-shadow: none;
     padding: 0;
+    margin-bottom: 15px;
+    border-radius: 40px;
+  }
+
+  .bottom-tab-bar{
+    max-width: 80%;
+    margin: auto !important;
+    margin-bottom: 15px !important;
   }
 
   .settings-left-panel .tab-btn {

@@ -1,0 +1,99 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--header-background);
+  color: var(--header-text-color);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.page-header-accent {
+  background: var(--accent-color);
+  color: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.page-header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin: 0;
+  padding: 0;
+}
+
+.page-header-accent .page-header-title {
+  color: white;
+}
+
+.page-header-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.page-header-accent .page-header-back-btn {
+  color: white;
+}
+
+.page-header-back-btn:hover {
+  background: var(--avatar-bg);
+}
+
+.page-header-accent .page-header-back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.page-header-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.page-header-action button {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.page-header-accent .page-header-action button {
+  color: white;
+}
+
+.page-header-action button:hover {
+  background: var(--avatar-bg);
+}
+
+.page-header-accent .page-header-action button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hide back button on desktop */
+@media (min-width: 900px) {
+  .page-header-back-btn {
+    display: none !important;
+  }
+}

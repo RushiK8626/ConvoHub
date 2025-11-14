@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ForgotPassword.css';
 import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { toasts, showError, showSuccess, removeToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
-      showToast('Please enter your email address', 'error');
+      showError('Please enter your email address');
       return;
     }
 
@@ -26,18 +27,18 @@ const ForgotPassword = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'OTP sent to your email', 'success');
+        showSuccess(data.message || 'OTP sent to your email');
         // Expect backend to return a userId/session identifier to continue reset
         // Pass the numeric id through navigation state and as a URL query parameter
         const numericId = Number(data.user_id);
         const url = `/verify-otp?uid=${encodeURIComponent(numericId)}`;
         navigate(url, { state: { userId: numericId, type: 'reset', message: data.message, expiresIn: data.expiresIn } });
       } else {
-        showToast(data.error || data.message || 'Failed to request password reset', 'error');
+        showError(data.error || data.message || 'Failed to request password reset');
       }
     } catch (err) {
       console.error('Request password reset error:', err);
-      showToast('Unable to request password reset. Try again later.', 'error');
+      showError('Unable to request password reset. Try again later.');
     } finally {
       setLoading(false);
     }
@@ -66,6 +67,7 @@ const ForgotPassword = () => {
         </form>
 
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

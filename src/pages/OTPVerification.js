@@ -4,13 +4,15 @@ import { useContext } from 'react';
 import { AuthContext } from '../App';
 import { Shield } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 import { io } from 'socket.io-client';
+import { subscribeToPushNotifications } from '../utils/notification.utils';
 import './OTPVerification.css';
 
 const OTPVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { showToast } = useToast();
+  const { toasts, showSuccess, showError, showInfo, removeToast } = useToast();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(300); // 5 minutes
   const [canResend, setCanResend] = useState(false);
@@ -25,12 +27,12 @@ const OTPVerification = () => {
   const rawUserId = location.state?.userId ?? params.get('uid') ?? null;
   const userId = rawUserId != null ? Number(rawUserId) : null;
   const { refreshAuth } = useContext(AuthContext);
+  
 
   // Initialize WebSocket connection for registration monitoring
   useEffect(() => {
     if (type !== 'register' || !username) return;
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
 
     // Connect to registration namespace
@@ -53,7 +55,7 @@ const OTPVerification = () => {
     socket.on('registration_cancelled', (data) => {
       console.log('Registration cancelled:', data.username);
       if (!verifiedRef.current) {
-        showToast('Registration cancelled. Please try again.', 'info');
+        showInfo('Registration cancelled. Please try again.');
         navigate('/register');
       }
     });
@@ -76,13 +78,12 @@ const OTPVerification = () => {
         socket.disconnect();
       }
     };
-  }, [username, type, navigate, showToast]);
+  }, [username, type, navigate, showInfo]);
 
   // Initialize WebSocket connection for login monitoring
   useEffect(() => {
     if (type !== 'login' || !userId) return;
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
 
     // Connect to login namespace
@@ -105,7 +106,7 @@ const OTPVerification = () => {
     socket.on('login_cancelled', (data) => {
       console.log('Login cancelled for userId:', data.userId);
       if (!verifiedRef.current) {
-        showToast('Login session expired. Please try again.', 'info');
+        showInfo('Login session expired. Please try again.');
         navigate('/login');
       }
     });
@@ -128,7 +129,7 @@ const OTPVerification = () => {
         socket.disconnect();
       }
     };
-  }, [userId, type, navigate, showToast]);
+  }, [userId, type, navigate, showInfo]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -146,6 +147,10 @@ const OTPVerification = () => {
     console.debug('OTPVerification mounted', { state: location.state, queryUid: params.get('uid'), resolvedUserId: userId, type });
     inputRefs.current[0]?.focus();
   }, []);
+
+  useEffect(() => {
+    showSuccess("OTP sent to your registered Email", 1000);
+  }, [showSuccess]);
 
   const handleChange = (index, value) => {
     if (isNaN(value)) return;
@@ -190,20 +195,20 @@ const OTPVerification = () => {
     
     if (otpString.length !== 6) {
       setError('Please enter the 6-digit code.');
-      showToast('Please enter the complete 6-digit code.', 'error');
+      showError('Please enter the complete 6-digit code.', 1000);
       return;
     }
     
     if (type === 'register' && !username) {
       setError('Username not found. Please try again.');
-      showToast('Session expired. Please try again.', 'error');
+      showError('Session expired. Please try again.', 1000);
       navigate('/register');
       return;
     }
     
     if (type === 'login' && !userId) {
       setError('Session not found. Please try again.');
-      showToast('Session expired. Please try again.', 'error');
+      showError('Session expired. Please try again.', 1000);
       navigate('/login');
       return;
     }
@@ -211,7 +216,7 @@ const OTPVerification = () => {
     // For password reset flow, verify OTP together with new password by calling reset API
     if (type === 'reset') {
       if (!userId) {
-        showToast('Session not found. Please request password reset again.', 'error');
+        showError('Session not found. Please request password reset again.', 1000);
         navigate('/forgot-password');
         return;
       }
@@ -219,19 +224,19 @@ const OTPVerification = () => {
       const otpString = otp.join('');
       if (otpString.length !== 6) {
         setError('Please enter the 6-digit code.');
-        showToast('Please enter the complete 6-digit code.', 'error');
+        showError('Please enter the complete 6-digit code.', 2000);
         return;
       }
 
       if (!newPassword || newPassword.length < 6) {
         setError('Please enter a password of at least 6 characters.');
-        showToast('Please enter a password of at least 6 characters.', 'error');
+        showError('Please enter a password of at least 6 characters.', 1000);
         return;
       }
 
       if (newPassword !== confirmPassword) {
         setError('Passwords do not match.');
-        showToast('Passwords do not match.', 'error');
+        showError('Passwords do not match.', 1000);
         return;
       }
 
@@ -242,7 +247,7 @@ const OTPVerification = () => {
         const body = { userId, otpCode: otpString, newPassword };
         // Diagnostic log: show payload and endpoint so it's easy to verify the request in the browser console
         console.debug('Reset password POST', { endpoint, body });
-        showToast('Resetting password...', 'info');
+        showInfo('Resetting password...');
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -252,19 +257,19 @@ const OTPVerification = () => {
         if (response.ok) {
           // Clear persisted userId since reset is complete
           try { sessionStorage.removeItem('passwordResetUserId'); } catch (e) { /* ignore */ }
-          showToast(data.message || 'Password reset successful. Please login.', 'success');
+          showSuccess(data.message || 'Password reset successful. Please login.', 1000);
           // disconnect socket if present
           if (socketRef.current && socketRef.current.connected) {
             socketRef.current.disconnect();
           }
           setTimeout(() => navigate('/login'), 1500);
         } else {
-          showToast(data.error || data.message || 'Failed to reset password', 'error');
+          showError(data.error || data.message || 'Failed to reset password', 1000);
           setTimeout(() => navigate('/forgot-password'), 1200);
         }
       } catch (err) {
         console.error('Reset password error:', err);
-        showToast('Unable to reset password. Try again later.', 'error');
+        showError('Unable to reset password. Try again later.', 1000);
         setTimeout(() => navigate('/forgot-password'), 1200);
       } finally {
         setLoading(false);
@@ -301,7 +306,7 @@ const OTPVerification = () => {
         
         if (type === 'register') {
           // Registration verification successful
-          showToast('Registration verified successfully! Please login.', 'success');
+          showSuccess('Registration verified successfully! Please login.', 1000);
           
           // Disconnect socket before redirecting
           if (socketRef.current && socketRef.current.connected) {
@@ -314,7 +319,7 @@ const OTPVerification = () => {
           }, 2000);
         } else {
           // Login verification successful
-          showToast('Login successful!', 'success');
+          showSuccess('Login successful!', 1000);
           
           // Save tokens for further requests
           localStorage.setItem('accessToken', data.accessToken);
@@ -328,6 +333,31 @@ const OTPVerification = () => {
           
           refreshAuth(); // force App rerender to update auth state
           
+          // Subscribe to push notifications after successful login
+          if ('serviceWorker' in navigator && 'PushManager' in window) {
+            console.log('📱 Requesting notification permission...');
+            
+            // First request notification permission
+            const permissionGranted = await Notification.requestPermission();
+            console.log('Notification permission result:', permissionGranted);
+            
+            if (permissionGranted === 'granted' || permissionGranted === 'default') {
+              subscribeToPushNotifications(data.user.id, data.accessToken)
+                .then((success) => {
+                  if (success) {
+                    console.log('✅ Push notifications subscribed');
+                  } else {
+                    console.log('⚠️ Push notifications subscription skipped');
+                  }
+                })
+                .catch((error) => {
+                  console.error('Error subscribing to push notifications:', error);
+                });
+            } else {
+              console.warn('⚠️ Notification permission denied by user');
+            }
+          }
+          
           // Redirect to chats after a short delay
           setTimeout(() => {
             navigate('/chats');
@@ -335,7 +365,7 @@ const OTPVerification = () => {
         }
       } else {
         setError(data.error || data.message || 'OTP verification failed.');
-        showToast(data.error || data.message || 'OTP verification failed. Please try again.', 'error');
+        showError(data.error || data.message || 'OTP verification failed. Please try again.', 1000);
         
         // If OTP expired, redirect back
         if (data.error && data.error.includes('expired')) {
@@ -352,7 +382,7 @@ const OTPVerification = () => {
     } catch (err) {
       console.error('OTP verification error:', err);
       setError('Unable to connect to server. Please try again later.');
-      showToast('Unable to connect to server. Please try again later.', 'error');
+      showError('Unable to connect to server. Please try again later.', 1000);
     } finally {
       setLoading(false);
     }
@@ -384,13 +414,13 @@ const OTPVerification = () => {
       const data = await response.json();
       
       if (response.ok) {
-        showToast('OTP resent successfully!', 'success');
+        showSuccess('OTP resent successfully!', 1000);
         setTimer(data.expiresIn || 300);
         setCanResend(false);
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       } else {
-        showToast(data.error || data.message || 'Failed to resend OTP', 'error');
+        showError(data.error || data.message || 'Failed to resend OTP', 1000);
         
         // If no pending session, redirect back
         if (data.error && (data.error.includes('No pending') || data.error.includes('expired'))) {
@@ -404,7 +434,7 @@ const OTPVerification = () => {
       }
     } catch (err) {
       console.error('Resend OTP error:', err);
-      showToast('Unable to resend OTP. Please try again.', 'error');
+      showError('Unable to resend OTP. Please try again.', 1000);
     } finally {
       setLoading(false);
     }
@@ -422,7 +452,7 @@ const OTPVerification = () => {
       socketRef.current.disconnect();
     }
     
-    showToast(`${type === 'register' ? 'Registration' : 'Login'} cancelled.`, 'info');
+    showInfo(`${type === 'register' ? 'Registration' : 'Login'} cancelled.`, 1000);
     navigate(type === 'register' ? '/register' : '/login');
   };
 
@@ -536,6 +566,7 @@ const OTPVerification = () => {
           </button>
         </div>
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

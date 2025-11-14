@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ToastContainer from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import './Profile.css';
 
-const UserProfile = () => {
-  const { userId } = useParams();
+const UserProfile = ({ userId: propUserId, isEmbedded = false, onBackClick = null }) => {
+  const { userId: paramUserId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const embedFromState = location.state?.isEmbedded || false;
+  
+  // Use prop userId if provided (embedded), otherwise use URL param
+  const userId = propUserId || paramUserId;
+  // Use prop isEmbedded if provided, otherwise check state
+  const isEmbeddedMode = isEmbedded || embedFromState;
+  
   const { toasts, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,7 +71,16 @@ const UserProfile = () => {
     <div className="profile-page">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="profile-header">
-        <button className="back-btn" onClick={() => navigate(-1)}>
+        <button className="back-btn" onClick={() => {
+          if (onBackClick) {
+            // If onBackClick callback provided (embedded in ChatHome), use it
+            onBackClick();
+          } else if (isEmbeddedMode) {
+            navigate(-1); // Go back to previous page in split layout
+          } else {
+            navigate('/chats');
+          }
+        }}>
           Back
         </button>
         <h1>Profile</h1>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   MoreVertical,
@@ -11,22 +11,45 @@ import {
   Check,
   CheckCheck,
   X,
-  Loader
+  Loader,
+  Copy,
+  Reply,
+  Forward,
+  Trash2,
+  Search,
+  Eraser,
+  UserCheck,
+  Ban,
+  Users,
+  UserPlus,
+  LogOut,
+  ChevronUp, 
+  ChevronDown
 } from 'lucide-react';
 import ChatInfoModal from '../components/ChatInfoModal';
+import UpdateGroupInfoModal from '../components/UpdateGroupInfoModal';
 import AttachmentPreview from '../components/AttachmentPreview';
 import ToastContainer from '../components/ToastContainer';
 import TypingIndicator from '../components/TypingIndicator';
+import ContextMenu from '../components/ContextMenu';
+import ConfirmationBox from '../components/ConfirmationBox';
+import MessageStatusIndicator from '../components/MessageStatusIndicator';
+import SystemMessage from '../components/SystemMessage';
+import useContextMenu from '../hooks/useContextMenu';
 import { useToast } from '../hooks/useToast';
+import useResponsive from '../hooks/useResponsive';
 import { formatMessageTime, formatLastSeen } from '../utils/dateUtils';
 import socketService from '../utils/socket';
 import { getFileLogo, isImageFile, formatFileSize } from '../utils/fileLogos';
 import './ChatWindow.css';
 
-const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) => {
+const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null, onMemberClick = null }) => {
   const params = useParams();
+  const location = useLocation();
   const chatId = propChatId || params?.chatId;
   const navigate = useNavigate();
+  const isWideScreen = useResponsive();
+  const [shouldSendGreeting, setShouldSendGreeting] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [messageText, setMessageText] = useState('');
@@ -38,6 +61,14 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toasts, showError, showSuccess, removeToast } = useToast();
 
+  // Message context menu hook
+  const messageContextMenu = useContextMenu();
+  const [selectedMessage, setSelectedMessage] = useState(null);
+
+  // Header context menu hook
+  const headerContextMenu = useContextMenu();
+  const [headerMenuBtn, setHeaderMenuBtn] = useState(null);
+  const [headerSearchBtn, setHeaderSearchBtn] = useState(null);
 
   // Get userId from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -48,7 +79,11 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     avatar: '💬', 
     online: false, 
     is_online: false,
-    last_seen: null 
+    last_seen: null,
+    admins: [],
+    is_admin: false,
+    description: '',
+    chat_image: null
   });
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,10 +91,110 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
   const [userProfiles, setUserProfiles] = useState({});
   const [chatImageUrl, setChatImageUrl] = useState(null); // Store blob URL for chat image
   const [showChatInfoModal, setShowChatInfoModal] = useState(false);
+  const [showUpdateGroupInfoModal, setShowUpdateGroupInfoModal] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
   const typingTimeoutRef = useRef(null);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [searchAddMember, setSearchAddMember] = useState('');
+  const [addMemberResults, setAddMemberResults] = useState([]);
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [selectedUserToAdd, setSelectedUserToAdd] = useState(null);
+  const [showAddMemberConfirmation, setShowAddMemberConfirmation] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [messageStatuses, setMessageStatuses] = useState({}); // {message_id: {user_id: status}}
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [currentResultIndex, setCurrentResultIndex] = useState(0);
+
+  const [selectedMessages, setSelectedMessages] = useState({});
+  const [messageSelection, setMessageSelection] = useState(false);
+  const [selectedOwnMessage, setSelectedOwnMessage] = useState(false);
+
+  const [replyToMessage, setReplyToMessage] = useState(null);
+
+  const messageRefs = useRef({});
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setSearchResults([]);
+      setCurrentResultIndex(0);
+      return;
+    }
+
+    const results = messages
+      .map((msg, index) => ({
+        ...msg,
+        originalIndex: index,
+      }))
+      .filter(msg => 
+        msg.message_text.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    setSearchResults(results);
+    setCurrentResultIndex(results.length > 0 ? 0 : -1);
+  }, [searchQuery, messages]);
+
+  useEffect(() => {
+    if (searchResults.length > 0 && currentResultIndex >= 0) {
+      const currentMessage = searchResults[currentResultIndex];
+      const messageElement = messageRefs.current[currentMessage.message_id];
+      
+      if (messageElement) {
+        messageElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }
+  }, [currentResultIndex, searchResults]);
+
+  const highlightText = (text, query) => {
+    if (!query.trim()) return text;
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-300 text-black rounded px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const handleNextResult = () => {
+    if (searchResults.length > 0) {
+      setCurrentResultIndex((prev) => 
+        prev < searchResults.length - 1 ? prev + 1 : 0
+      );
+    }
+  };
+
+  const handlePrevResult = () => {
+    if (searchResults.length > 0) {
+      setCurrentResultIndex((prev) => 
+        prev > 0 ? prev - 1 : searchResults.length - 1
+      );
+    }
+  };
+
+  const handleCloseSearch = () => {
+    setShowSearch(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setCurrentResultIndex(0);
+  };
+
+  const isCurrentResult = (msgId) => {
+    return searchResults.length > 0 && 
+           searchResults[currentResultIndex]?.message_id === msgId;
+  };
 
   // Function to fetch user profile by user_id
   const fetchUserProfile = async (senderId) => {
@@ -125,8 +260,37 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     setShowUserProfileModal(true);
   };
 
+  // Handle member click from group info modal
+  const handleMemberClick = (memberId) => {
+    // If onMemberClick callback provided, use it to show member profile in modal
+    if (onMemberClick) {
+      onMemberClick(memberId);
+      return;
+    }
+    
+    // Otherwise, navigate to user profile
+    navigate(`/user/${memberId}`);
+  };
+
+  // Handle responsive layout changes
+  useEffect(() => {
+    // If viewing ChatWindow as a full page (not embedded) on a wide screen, navigate back to ChatHome with the chat open
+    if (!isEmbedded && isWideScreen && typeof window !== 'undefined' && window.innerWidth >= 900) {
+      // Navigate back to chat home with this chat selected (will open in split layout)
+      navigate('/chats', { state: { selectedChatId: chatId } });
+    }
+  }, [isWideScreen, isEmbedded, chatId, navigate]);
+
   useEffect(() => {
     const fetchChatAndMessages = async () => {
+      // Validate userId before making requests
+      if (!userId) {
+        console.error('[ERROR] userId is not available');
+        setError('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError('');
       try {
@@ -180,15 +344,6 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
           }
         }
         
-        console.log('[🔵 INITIAL FETCH] Online status loaded for chat:', {
-          chatId,
-          chatType,
-          otherUserId,
-          is_online: isOnline,
-          last_seen: lastSeen,
-          timestamp: new Date().toISOString()
-        });
-        
         setChatInfo((info) => ({
           ...info,
           name: chatName,
@@ -198,10 +353,15 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
           last_seen: lastSeen,
           chat_type: chatType,
           members: members,
-          otherUserId: otherUserId
+          otherUserId: otherUserId,
+          admins: chat.admins || [],
+          description: chat.chat_description || chat.description || '',
+          chat_image: chat.chat_image || null,
+          // mark whether current user is admin in this group
+          is_admin: Array.isArray(chat.admins) && chat.admins.some(a => a.user_id === userId)
         }));
-        // Fetch messages
-        const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/messages/chat/${chatId}`, {
+        // Fetch messages with proper userId parameter
+        const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/messages/chat/${chatId}?userId=${encodeURIComponent(String(userId))}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -209,7 +369,28 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
         });
         if (!res.ok) throw new Error('Failed to fetch messages');
         const data = await res.json();
+
+        console.log(data);
         setMessages(data.messages || []);
+        
+        // Parse message statuses from the API response
+        if (data.messages && Array.isArray(data.messages)) {
+          const statusMap = {};
+          data.messages.forEach(message => {
+            if (message.status && Array.isArray(message.status)) {
+              statusMap[message.message_id] = {};
+              message.status.forEach(statusItem => {
+                statusMap[message.message_id][statusItem.user_id] = statusItem.status;
+              });
+            }
+          });
+          setMessageStatuses(statusMap);
+
+          setSelectedMessages(prev => ({
+          ...prev,
+          ...Object.fromEntries(data.messages.map(item => [item.message_id, false]))
+        }));
+        }
       } catch (err) {
         setError(err.message || 'Error fetching messages');
       } finally {
@@ -217,8 +398,37 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
       }
     };
     fetchChatAndMessages();
-    // eslint-disable-next-line
-  }, [chatId]);
+  }, [chatId, userId]);
+
+  // Handle greeting message for newly created private chats
+  useEffect(() => {
+    const greetingChatId = sessionStorage.getItem('sendGreetingOnChatLoad');
+    if (greetingChatId && Number(greetingChatId) === Number(chatId) && messages.length > 0) {
+      // Clear the flag
+      sessionStorage.removeItem('sendGreetingOnChatLoad');
+      setShouldSendGreeting(true);
+    }
+  }, [chatId, messages.length]);
+
+  // Send greeting message when flag is set and chat is ready
+  useEffect(() => {
+    if (shouldSendGreeting && !loading && messages.length > 0) {
+      setShouldSendGreeting(false);
+      // Send greeting with a small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        const messageData = {
+          chat_id: parseInt(chatId),
+          sender_id: userId,
+          message_text: "Hello!👋",
+          message_type: 'text',
+          tempId: tempId
+        };
+        socketService.sendMessage(messageData);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldSendGreeting, loading, messages.length, chatId, userId]);
 
   // Fetch user profiles for message senders
   useEffect(() => {
@@ -229,6 +439,26 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     });
     // eslint-disable-next-line
   }, [messages]);
+
+  // Mark received messages as read when they come into view
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    // Mark messages from other users as read (they're already delivered from API)
+    messages.forEach(message => {
+      // Only mark messages from other users (not sent by current user)
+      if (message.sender_id !== userId) {
+        const currentStatus = messageStatuses[message.message_id];
+        const userStatus = currentStatus?.[userId];
+        
+        // If message hasn't been marked as read yet, mark it as read
+        if (userStatus !== 'read') {
+          socketService.updateMessageStatus(message.message_id, 'read');
+        }
+      }
+    });
+    // eslint-disable-next-line
+  }, [messages, userId, messageStatuses]);
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -258,6 +488,14 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
 
     joinChatWhenReady();
 
+    // DEBUG: Log all socket events for this chat
+    const onAnyEvent = (event, data) => {
+      if (event.includes('member') || event.includes('add') || event.includes('remove')) {
+        console.log(`🎯 SOCKET EVENT: ${event}`, data);
+      }
+    };
+    socket.onAny(onAnyEvent);
+
     // Listen for new messages
     const handleNewMessage = (message) => {
       setMessages(prevMessages => {
@@ -270,7 +508,6 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
             m => m.message_id === message.message_id && !m.isOptimistic
           );
           if (existingRealMessage) {
-            console.log('⚠️ Real message already exists, skipping');
             return prevMessages;
           }
 
@@ -281,7 +518,6 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
             
             // Remove optimistic message if tempId matches
             if (m.tempId === message.tempId) {
-              console.log(`✅ Replacing optimistic message (tempId: ${message.tempId}) with real message (id: ${message.message_id})`);
               return false; // Remove this optimistic message
             }
             
@@ -303,59 +539,24 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
 
     // Listen for typing indicators
     const handleUserTyping = ({ userId: typingUserId, userName }) => {
-      console.log('[⌨️ TYPING EVENT] user_typing received:', {
-        typingUserId,
-        userName,
-        currentUserId: userId,
-        isOtherUser: typingUserId !== userId,
-        timestamp: new Date().toISOString()
-      });
-
       if (typingUserId !== userId) {
         setTypingUsers(prev => {
           const alreadyTyping = prev.some(u => u.userId === typingUserId);
-          console.log('[⌨️ STATE] user_typing state update:', {
-            action: alreadyTyping ? 'SKIP_DUPLICATE' : 'ADD_USER',
-            typingUserId,
-            userName,
-            currentTypingUsers: prev.length,
-            newTypingUsers: alreadyTyping ? prev.length : prev.length + 1,
-            timestamp: new Date().toISOString()
-          });
 
           if (!alreadyTyping) {
-            const updated = [...prev, { userId: typingUserId, userName }];
-            console.log('[⌨️ UPDATE] New typingUsers array:', updated);
-            return updated;
+            return [...prev, { userId: typingUserId, userName }];
           }
           return prev;
         });
-      } else {
-        console.log('[⌨️ SKIP] Ignored typing event from self');
       }
     };
 
     const handleUserStoppedTyping = ({ userId: typingUserId }) => {
-      console.log('[⌨️ STOPPED EVENT] user_stopped_typing received:', {
-        typingUserId,
-        currentUserId: userId,
-        timestamp: new Date().toISOString()
-      });
-
       setTypingUsers(prev => {
         const wasTyping = prev.some(u => u.userId === typingUserId);
-        console.log('[⌨️ STATE] user_stopped_typing state update:', {
-          wasTyping,
-          typingUserId,
-          currentTypingUsers: prev.length,
-          newTypingUsers: wasTyping ? prev.length - 1 : prev.length,
-          timestamp: new Date().toISOString()
-        });
 
         if (wasTyping) {
-          const updated = prev.filter(u => u.userId !== typingUserId);
-          console.log('[⌨️ UPDATE] Removed typingUserId, new array:', updated);
-          return updated;
+          return prev.filter(u => u.userId !== typingUserId);
         }
         return prev;
       });
@@ -406,16 +607,146 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     // Listen for file upload progress updates from server
     const handleFileUploadProgress = (progressData) => {
       const { progress, tempId } = progressData;
-      console.log(`📊 Server Progress: ${progress}%`);
       setUploadProgress(progress);
     };
 
     // Listen for file upload success from server
     const handleFileUploadSuccess = (messageData) => {
-      console.log('✅ File upload success event received:', messageData);
       // The new_message listener will handle adding the persisted message
       // This event confirms the file was saved to database
     };
+
+    // Listen for message status updates (delivered/read)
+    const handleMessageStatusUpdated = (statusData) => {
+      const { message_id, user_id, status, updated_at } = statusData;
+      
+      setMessageStatuses(prev => {
+        return {
+          ...prev,
+          [message_id]: {
+            ...prev[message_id],
+            [user_id]: status
+          }
+        };
+      });
+    };
+
+    // Listen for message deletion events
+    const handleMessageDeletedForAllUsers = (data) => {
+      console.log('🗑️ Message deleted for all users:', data);
+      setMessages(prevMessages => 
+        prevMessages.filter(m => m.message_id !== data.message_id)
+      );
+      showSuccess('Message deleted for everyone');
+    };
+
+    const handleDeleteSuccess = (data) => {
+      console.log('✅ Delete success:', data);
+      showSuccess(data.message || 'Message deleted');
+      messageContextMenu.closeMenu();
+    };
+
+    const handleDeleteError = (data) => {
+      console.error('❌ Delete error:', data);
+      showError(data.error || 'Failed to delete message');
+    };
+
+    // Handle member added to group
+    const handleMemberAdded = (data) => {
+      console.log('👥 Member added to group - RAW DATA:', data);
+      console.log('Current chatId:', chatId, 'Message chatId:', data?.chat_id);
+      
+      // Only add system message if event is for current chat
+      if (data.chat_id !== parseInt(chatId)) {
+        console.log('⚠️ Event is for different chat, ignoring');
+        return;
+      }
+      
+      // Add system message to chat
+      const systemMessage = {
+        message_id: `system_${Date.now()}_${Math.random()}`,
+        chat_id: chatId,
+        message_text: data.message || `${data.member?.full_name || data.member?.username} joined the group`,
+        message_type: 'system',
+        type: 'member_added',
+        created_at: data.timestamp || new Date().toISOString(),
+        sender: {
+          user_id: null,
+          username: 'system',
+          full_name: 'System',
+          profile_pic: null
+        },
+        isSystem: true
+      };
+      
+      console.log('📝 Adding system message:', systemMessage);
+      setMessages(prevMessages => [...prevMessages, systemMessage]);
+    };
+
+    // handle member removed by admin
+    const handleMemberRemoved = (data) => {
+      console.log('👥 Member removed from group - RAW DATA:', data);
+      console.log('Current chatId:', chatId, 'Message chatId:', data?.chat_id);
+      
+      // Only add system message if event is for current chat
+      if (data.chat_id !== parseInt(chatId)) {
+        console.log('⚠️ Event is for different chat, ignoring');
+        return;
+      }
+      
+      // Add system message to chat
+      const systemMessage = {
+        message_id: `system_${Date.now()}_${Math.random()}`,
+        chat_id: chatId,
+        message_text: data.message || `${data.member?.full_name || data.member?.username} joined the group`,
+        message_type: 'system',
+        type: 'member_removed',
+        created_at: data.timestamp || new Date().toISOString(),
+        sender: {
+          user_id: null,
+          username: 'system',
+          full_name: 'System',
+          profile_pic: null
+        },
+        isSystem: true
+      };
+      
+      console.log('📝 Adding system message:', systemMessage);
+      setMessages(prevMessages => [...prevMessages, systemMessage]);
+    };
+
+    // Handle member added to group
+    const handleMemberExited = (data) => {
+      console.log('👥 Member exited from group - RAW DATA:', data);
+      console.log('Current chatId:', chatId, 'Message chatId:', data?.chat_id);
+      
+      // Only add system message if event is for current chat
+      if (data.chat_id !== parseInt(chatId)) {
+        console.log('⚠️ Event is for different chat, ignoring');
+        return;
+      }
+      
+      // Add system message to chat
+      const systemMessage = {
+        message_id: `system_${Date.now()}_${Math.random()}`,
+        chat_id: chatId,
+        message_text: data.message || `${data.member?.full_name || data.member?.username} joined the group`,
+        message_type: 'system',
+        type: 'member_added',
+        created_at: data.timestamp || new Date().toISOString(),
+        sender: {
+          user_id: null,
+          username: 'system',
+          full_name: 'System',
+          profile_pic: null
+        },
+        isSystem: true
+      };
+      
+      console.log('📝 Adding system message:', systemMessage);
+      setMessages(prevMessages => [...prevMessages, systemMessage]);
+    };
+
 
     // Add listeners
     socket.on('new_message', handleNewMessage);
@@ -426,27 +757,22 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     socket.on('user_online_status', handleUserOnlineStatus);
     socket.on('file_upload_progress_update', handleFileUploadProgress);
     socket.on('file_upload_success', handleFileUploadSuccess);
-
-    console.log('✅ Socket listeners registered for chat:', chatId);
-    console.log('[⌨️ LISTENER] Registered listeners:', [
-      'new_message',
-      'user_typing',
-      'user_stopped_typing',
-      'user_online',
-      'user_offline',
-      'user_online_status',
-      'file_upload_progress_update',
-      'file_upload_success'
-    ]);
+    socket.on('message_status_updated', handleMessageStatusUpdated);
+    socket.on('message_deleted_for_all', handleMessageDeletedForAllUsers);
+    socket.on('delete_success', handleDeleteSuccess);
+    socket.on('delete_error', handleDeleteError);
+    socket.on('member_added', handleMemberAdded);
+    socket.on('member_removed', handleMemberAdded);
+    socket.on('member_exited', handleMemberExited);
 
     // Cleanup on unmount - MUST remove listeners with same callback reference
     return () => {
-      console.log('🧹 Cleaning up socket listeners for chat:', chatId);
-      console.log('[🧹 CLEANUP] Removing all socket listeners');
-      
       socketService.leaveChat(chatId);
       
       if (socket) {
+        // Remove debug listener
+        socket.offAny(onAnyEvent);
+        
         // Remove each listener with the exact callback reference
         socket.off('new_message', handleNewMessage);
         socket.off('user_typing', handleUserTyping);
@@ -456,9 +782,14 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
         socket.off('user_online_status', handleUserOnlineStatus);
         socket.off('file_upload_progress_update', handleFileUploadProgress);
         socket.off('file_upload_success', handleFileUploadSuccess);
+        socket.off('message_status_updated', handleMessageStatusUpdated);
+        socket.off('message_deleted_for_all', handleMessageDeletedForAllUsers);
+        socket.off('delete_success', handleDeleteSuccess);
+        socket.off('delete_error', handleDeleteError);
+        socket.off('member_added', handleMemberAdded);
+        socket.off('member_removed', handleMemberAdded);
+        socket.off('member_exited', handleMemberExited);
       }
-      
-      console.log('✅ Socket listeners cleaned up for chat:', chatId);
     };
     // eslint-disable-next-line
   }, [chatId, userId]);
@@ -466,28 +797,6 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Debug effect to monitor chatInfo changes
-  useEffect(() => {
-    console.log('[📊 MONITOR] chatInfo changed:', {
-      id: chatInfo.id,
-      name: chatInfo.name,
-      is_online: chatInfo.is_online,
-      last_seen: chatInfo.last_seen,
-      otherUserId: chatInfo.otherUserId,
-      chat_type: chatInfo.chat_type,
-      timestamp: new Date().toISOString()
-    });
-  }, [chatInfo]);
-
-  // Debug effect to monitor typing users changes
-  useEffect(() => {
-    console.log('[⌨️ TYPING MONITOR] typingUsers array changed:', {
-      count: typingUsers.length,
-      users: typingUsers.map(u => ({ userId: u.userId, userName: u.userName })),
-      timestamp: new Date().toISOString()
-    });
-  }, [typingUsers]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -516,7 +825,8 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
       sender_id: userId,
       message_text: messageToSend,
       message_type: 'text',
-      tempId: tempId // Include tempId so server can send it back
+      tempId: tempId, // Include tempId so server can send it back
+      reply_to_id: replyToMessage?.message_id || null // Include reply_to_id if replying
     };
 
     socketService.sendMessage(messageData);
@@ -534,24 +844,21 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
         profile_pic: user.profile_pic
       },
       status: [{ status: 'sending' }],
-      isOptimistic: true // Flag to identify optimistic messages
+      isOptimistic: true, // Flag to identify optimistic messages
+      reply_to_message: replyToMessage // Include the reply message for UI
     };
 
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+    
+    // Clear reply mode after sending
+    setReplyToMessage(null);
   };
 
   // Handle typing indicator
   const handleTyping = useCallback(() => {
     if (!socketService.isSocketConnected()) {
-      console.log('[⌨️ SEND] Socket not connected, cannot send typing event');
       return;
     }
-
-    console.log('[⌨️ SEND] Emitting typing event:', {
-      chatId,
-      userId,
-      timestamp: new Date().toISOString()
-    });
 
     socketService.sendTyping(chatId, userId);
 
@@ -562,14 +869,520 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
 
     // Set new timeout to stop typing indicator after 2 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
-      console.log('[⌨️ SEND STOPPED] Emitting stopped_typing event:', {
-        chatId,
-        userId,
-        timestamp: new Date().toISOString()
-      });
       socketService.sendStoppedTyping(chatId, userId);
     }, 2000);
   }, [chatId, userId]);
+
+  // Message context menu handlers
+  const handleReplyMessage = (referenced_message) => {
+    const messageToReply = selectedMessage || referenced_message
+    if (messageToReply) {
+      setReplyToMessage(messageToReply);
+      messageContextMenu.closeMenu();
+      showSuccess('Reply mode activated');
+    }
+  };
+
+  const handleForwardMessage = () => {
+    if (selectedMessage) {
+      // TODO: Implement forward functionality
+      showSuccess('Forward mode activated');
+    }
+  };
+
+  const handleCopyMessage = () => {
+    if (selectedMessage?.message_text) {
+      navigator.clipboard.writeText(selectedMessage.message_text);
+      showSuccess('Message copied to clipboard');
+    }
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!selectedMessage) return;
+
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('accessToken');
+      
+      const res = await fetch(`${API_URL}/api/messages/${selectedMessage.message_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (res.ok) {
+        // Remove message from local state
+        setMessages(prevMessages => 
+          prevMessages.filter(m => m.message_id !== selectedMessage.message_id)
+        );
+        showSuccess('Message deleted');
+      } else {
+        showError('Failed to delete message');
+      }
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      showError('Error deleting message');
+    }
+  };
+
+  const handleDeleteMessageForAll = async () => {
+    if (!selectedMessage) return;
+
+    // Only allow deletion if it's the sender's message or if user is admin
+    const isOwn = selectedMessage.sender_id === userId;
+    const isAdmin = chatInfo.is_admin;
+    
+    if (!isOwn && !isAdmin) {
+      showError('You can only delete your own messages');
+      return;
+    }
+
+    if (!window.confirm('Delete this message for everyone in the chat?')) {
+      return;
+    }
+
+    try {
+      socketService.deleteMessageForAll(selectedMessage.message_id);  // ✅ USE WEBSOCKET
+      showSuccess('Message deleted for everyone');
+      messageContextMenu.closeMenu();
+    } catch (err) {
+      console.error('Error deleting message for all:', err);
+      showError('Error deleting message');
+    }
+  };
+
+  // Get context menu items based on message ownership
+  const getMessageContextMenuItems = (message) => {
+    const isOwn = message?.sender_id === userId;
+    const items = [
+      {
+        id: 'select',
+        label: 'Select',
+        icon: <Check size={16} />,
+        onClick: () => handleMessageSelection(message.message_id, isOwn)
+      },
+      {
+        id: 'copy',
+        label: 'Copy',
+        icon: <Copy size={16} />,
+        onClick: handleCopyMessage,
+        disabled: !message?.message_text,
+      },
+      {
+        id: 'reply',
+        label: 'Reply',
+        icon: <Reply size={16} />,
+        onClick: handleReplyMessage,
+      },
+      {
+        id: 'forward',
+        label: 'Forward',
+        icon: <Forward size={16} />,
+        onClick: handleForwardMessage,
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        icon: <Trash2 size={16} />,
+        color: 'danger',
+        onClick: handleDeleteMessage,
+      }
+    ];
+
+    // Only show delete for all option for own messages or admins
+    if (isOwn || chatInfo.is_admin) {
+      items.push({ id: 'divider', divider: true });
+      items.push({
+        id: 'delete-for-all',
+        label: 'Delete For All',
+        icon: <Trash2 size={16} />,
+        color: 'danger',
+        onClick: handleDeleteMessageForAll,
+      });
+    }
+
+    return items;
+  };
+
+  // Handle context menu for sent messages (adjust position to prevent off-screen)
+  const handleSentMessageContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get the menu width (approximately 280px based on ContextMenu.css)
+    const menuWidth = 280;
+    const menuHeight = 400;
+    
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    // Adjust x position if menu would go off right edge
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 16; // 16px margin
+    }
+    
+    // Adjust y position if menu would go off bottom
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 16; // 16px margin
+    }
+    
+    // Update menu state with adjusted position
+    messageContextMenu.setMenu({ isOpen: true, x, y });
+  };
+
+  // Handle context menu for received messages (normal positioning)
+  const handleReceivedMessageContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    const menuWidth = 280;
+    const menuHeight = 400;
+    
+    // Adjust if goes off right edge
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 16;
+    }
+    
+    // Adjust if goes off bottom
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 16;
+    }
+    
+    messageContextMenu.setMenu({ isOpen: true, x, y });
+  };
+
+  // Header context menu handlers
+  const handleSearchChat = () => {
+    // showSuccess('Search functionality - To be implemented');
+
+  };
+
+  const handleClearChat = () => {
+    if (window.confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
+      // TODO: Implement clear chat API call
+      showSuccess('Chat cleared successfully');
+    }
+  };
+
+  const handleViewContactOrGroupInfo = () => {
+    setShowChatInfoModal(true);
+  };
+
+  const handleBlockUser = async () => {
+    if (chatInfo.chat_type !== 'private') return;
+    
+    // chatInfo uses camelCase otherUserId
+    const otherUserId = chatInfo.otherUserId;
+    if (!otherUserId) return;
+
+    if (window.confirm('Are you sure you want to block this user?')) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/users/block/${otherUserId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          showSuccess('User blocked successfully');
+          setTimeout(() => navigate('/chats'), 1500);
+        } else {
+          showError('Failed to block user');
+        }
+      } catch (err) {
+        console.error('Error blocking user:', err);
+        showError('Failed to block user');
+      }
+    }
+  };
+
+  const handleAddMember = () => {
+    setShowAddMemberModal(true);
+    setSearchAddMember('');
+    setAddMemberResults([]);
+  };
+
+  // Search for users to add to group (excluding existing members)
+  const searchUsersForAddMember = useCallback(async (query) => {
+    if (!query.trim()) {
+      setAddMemberResults([]);
+      setAddMemberLoading(false);
+      return;
+    }
+
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_URL}/api/users/public/search?query=${encodeURIComponent(query)}&page=1&limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Get existing member IDs
+        const existingMemberIds = chatInfo.members?.map(m => m.user_id) || [];
+        
+        // Filter out existing members and current user
+        const usersWithPics = (data.users || [])
+          .filter(user => user.user_id !== userId && !existingMemberIds.includes(user.user_id))
+          .map(user => {
+            if (user.profile_pic) {
+              const filename = user.profile_pic.split('/uploads/').pop();
+              user.profile_pic = `${API_URL}/uploads/profiles/${filename}`;
+            }
+            return user;
+          });
+        setAddMemberResults(usersWithPics);
+      }
+    } catch (err) {
+      console.error('Error searching users:', err);
+      showError('Error searching users');
+    } finally {
+      setAddMemberLoading(false);
+    }
+  }, [chatInfo.members, userId]);
+
+  // Debounce effect for add member search
+  useEffect(() => {
+    if (!searchAddMember.trim()) {
+      setAddMemberResults([]);
+      setAddMemberLoading(false);
+      return;
+    }
+
+    setAddMemberLoading(true);
+    const debounceTimer = setTimeout(() => {
+      searchUsersForAddMember(searchAddMember);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchAddMember, searchUsersForAddMember]);
+
+  // Reset confirmation state when add member modal closes
+  useEffect(() => {
+    if (!showAddMemberModal) {
+      setShowAddMemberConfirmation(false);
+      setSelectedUserToAdd(null);
+      setIsAddingMember(false);
+    }
+  }, [showAddMemberModal]);
+
+  // Show confirmation before adding user to group
+  const handleSelectUserToAddClick = (selectedUser) => {
+    setSelectedUserToAdd(selectedUser);
+    setShowAddMemberConfirmation(true);
+  };
+
+  // Handle selecting a user to add to group
+  const handleSelectUserToAdd = async () => {
+    if (!selectedUserToAdd) return;
+
+    try {
+      setIsAddingMember(true);
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      let token = localStorage.getItem('accessToken');
+      
+      // Add member to group
+      let addMemberRes = await fetch(`${API_URL}/api/chats/${chatId}/members`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: selectedUserToAdd.user_id
+        })
+      });
+
+      // If unauthorized, try to refresh token
+      if (addMemberRes.status === 401) {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          try {
+            const refreshRes = await fetch(`${API_URL}/api/auth/refresh-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken: String(refreshToken) }),
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              localStorage.setItem('accessToken', refreshData.accessToken);
+              token = refreshData.accessToken;
+              
+              // Retry adding member with new token
+              addMemberRes = await fetch(`${API_URL}/api/chats/${chatId}/members`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  user_id: selectedUserToAdd.user_id
+                })
+              });
+            }
+          } catch (refreshErr) {
+            console.error('Token refresh failed:', refreshErr);
+          }
+        }
+      }
+
+      if (addMemberRes.ok) {
+        showSuccess(`${selectedUserToAdd.full_name || selectedUserToAdd.username} added to group`);
+        // Close modal and clear search
+        setShowAddMemberModal(false);
+        setShowAddMemberConfirmation(false);
+        setSearchAddMember('');
+        setAddMemberResults([]);
+        setSelectedUserToAdd(null);
+      } else {
+        const errorData = await addMemberRes.json();
+        showError(errorData.message || 'Failed to add member');
+      }
+    } catch (err) {
+      console.error('Error adding member:', err);
+      showError('Failed to add member');
+    }
+  };
+
+  const handleUpdateGroupInfo = () => {
+    setShowUpdateGroupInfoModal(true);
+  };
+
+  const handleGroupInfoUpdateSuccess = (updatedChat) => {
+    console.log('🎉 Group info update success:', updatedChat);
+    
+    // Update chat info with new details
+    setChatInfo(prev => ({
+      ...prev,
+      name: updatedChat.chat_name || prev.name,
+      chat_image: updatedChat.chat_image || null,
+      description: updatedChat.chat_description || ''
+    }));
+
+    // Refetch chat image if available
+    if (updatedChat.chat_image) {
+      fetchChatImage(updatedChat.chat_image);
+    }
+
+    showSuccess('Group info updated successfully');
+  };
+
+  const handleExitGroup = async () => {
+    if (chatInfo.chat_type !== 'group') return;
+
+    if (window.confirm('Are you sure you want to exit this group?')) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/chats/${chatId}/members/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          showSuccess('Exited group successfully');
+          setTimeout(() => navigate('/chats'), 1500);
+        } else {
+          showError('Failed to exit group');
+        }
+      } catch (err) {
+        console.error('Error exiting group:', err);
+        showError('Failed to exit group');
+      }
+    }
+  };
+
+  // Generate header context menu items based on chat type
+  const getHeaderMenuItems = () => {
+    const items = [
+      {
+        id: 'search',
+        label: 'Search',
+        icon: <Search size={16} />,
+        onClick: (e) => {
+            // e.preventDefault();
+            // e.stopPropagation();
+            setShowSearch(!showSearch)
+        }
+      },
+      {
+        id: 'clear',
+        label: 'Clear Chat',
+        icon: <Eraser size={16} />,
+        onClick: handleClearChat,
+      },
+      { id: 'divider1', divider: true },
+    ];
+
+    if (chatInfo.chat_type === 'private') {
+      items.push(
+        {
+          id: 'view-contact',
+          label: 'View Contact',
+          icon: <UserCheck size={16} />,
+          onClick: handleViewContactOrGroupInfo,
+        },
+        {
+          id: 'block',
+          label: 'Block User',
+          icon: <Ban size={16} />,
+          color: 'danger',
+          onClick: handleBlockUser,
+        }
+      );
+    } else if (chatInfo.chat_type === 'group') {
+      items.push(
+        {
+          id: 'view-info',
+          label: 'View Group Info',
+          icon: <Users size={16} />,
+          onClick: handleViewContactOrGroupInfo,
+        }
+      );
+
+      // Show add member only to group admin
+      if (chatInfo.is_admin) {
+        items.push({
+          id: 'add-member',
+          label: 'Add Member',
+          icon: <UserPlus size={16} />,
+          onClick: handleAddMember,
+        });
+        items.push({
+          id: 'update-info',
+          label: 'Update Group Info',
+          icon: <Users size={16} />,
+          onClick: handleUpdateGroupInfo,
+        });
+      }
+
+      items.push(
+        { id: 'divider2', divider: true },
+        {
+          id: 'exit',
+          label: 'Exit Group',
+          icon: <LogOut size={16} />,
+          color: 'danger',
+          onClick: handleExitGroup,
+        }
+      );
+    }
+
+    return items;
+  };
 
   const handleAttachment = (type) => {
     setShowAttachMenu(false);
@@ -655,13 +1468,13 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
           tempId: tempId
         };
 
-        console.log('📤 Sending file message via WebSocket:', {
-          chat_id: fileMessageData.chat_id,
-          fileName: fileMessageData.fileName,
-          fileSize: fileMessageData.fileSize,
-          fileType: fileMessageData.fileType,
-          message_text: fileMessageData.message_text
-        });
+        // console.log('📤 Sending file message via WebSocket:', {
+        //   chat_id: fileMessageData.chat_id,
+        //   fileName: fileMessageData.fileName,
+        //   fileSize: fileMessageData.fileSize,
+        //   fileType: fileMessageData.fileType,
+        //   message_text: fileMessageData.message_text
+        // });
 
         // Add optimistic message to UI immediately
         const optimisticMessage = {
@@ -780,6 +1593,45 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Helper function to get referenced message from messages array
+  const getReferencedMessage = (referencedMessageId) => {
+    if (!referencedMessageId) return null;
+    return messages.find(msg => msg.message_id === referencedMessageId);
+  };
+
+  const handleMessageSelection = (message_id, isOwn) => {
+    if (!message_id) return;
+    const id = message_id;
+    
+    setSelectedMessages((prevItems) => {
+      const newSelectedMessages = {
+        ...prevItems,
+        [id]: !prevItems[id]
+      };
+
+      setSelectedOwnMessage(true);
+      
+      // Calculate the actual count of selected items
+      const selectedCount = Object.values(newSelectedMessages).filter(Boolean).length;
+      
+      // Update messageSelection based on count
+      setMessageSelection(selectedCount > 0);
+      
+      console.log('Selected messages:', selectedCount, newSelectedMessages);
+
+      if(!isOwn) setSelectedOwnMessage(false);
+      
+      return newSelectedMessages;
+    });
+  }
+
+  const clearAllSelection = async() => {
+    setSelectedMessages(prev =>
+      Object.fromEntries(Object.keys(prev).map(key => [key, false]))
+    );
+    setMessageSelection(false);
+  }
+
   return (
     <div className="chat-window">
       {/* Hidden file input */}
@@ -845,12 +1697,161 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
             )}
           </div>
         </div>
-        <button className="header-more-btn">
-          <MoreVertical size={24} />
-        </button>
+
+        
+
+        { messageSelection ?
+        <>
+          <button
+            className="header-delete-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowSearch(!showSearch)
+            }}
+          >  
+            <Trash2 size={24} />
+          </button>
+
+          <button
+            className="header-forward-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowSearch(!showSearch)
+            }}
+          >  
+            <Forward size={24} />
+          </button>
+
+          <button
+            className="header-clear-selection-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              clearAllSelection();
+            }}
+          >  
+            <X size={24} />
+          </button>
+        </> :
+        <>
+          <button
+            ref={setHeaderSearchBtn}
+            className="header-search-button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowSearch(!showSearch)
+            }}
+          >  
+            <Search size={24} />
+          </button>
+
+          <button 
+            ref={setHeaderMenuBtn}
+            className="header-more-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Get button position
+              const rect = e.currentTarget.getBoundingClientRect();
+              const menuWidth = 280;
+              const menuHeight = 300;
+              
+              // Position menu below the button, to the left
+              let x = rect.left - menuWidth + 32; // Position to the left with some offset
+              let y = rect.bottom + 8; // 8px below the button
+              
+              // Adjust x if menu would go off left edge
+              if (x < 8) {
+                x = 8;
+              }
+              
+              // Adjust y if menu would go off bottom
+              if (y + menuHeight > window.innerHeight) {
+                y = rect.top - menuHeight - 8; // Position above button instead
+              }
+              
+              headerContextMenu.setMenu({ isOpen: true, x, y });
+            }}
+          >
+            <MoreVertical size={24} />
+          </button>
+        </>
+        }
       </div>
 
-      <div className="messages-container">
+      {/* Search Box */}
+      {showSearch && (
+        <div className="search-box-container">
+          <div className="search-box-wrapper">
+            <div className="search-input-wrapper">
+              {/* <Search size={18} className="search-icon" /> */}
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search messages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="search-clear-btn"
+                  type="button"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+            
+            {searchResults.length > 0 && (
+              <div className="search-results-info">
+                <span className="search-counter">
+                  {currentResultIndex + 1} / {searchResults.length}
+                </span>
+                <button
+                  onClick={handlePrevResult}
+                  className="search-nav-btn search-prev-btn"
+                  type="button"
+                  title="Previous result"
+                >
+                  <ChevronUp size={18} />
+                </button>
+                <button
+                  onClick={handleNextResult}
+                  className="search-nav-btn search-next-btn"
+                  type="button"
+                  title="Next result"
+                >
+                  <ChevronDown size={18} />
+                </button>
+              </div>
+            )}
+            
+            {!searchQuery && (
+              <button
+                onClick={handleCloseSearch}
+                className="search-close-btn"
+                type="button"
+                title="Close search"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
+          
+          {searchQuery && searchResults.length === 0 && (
+            <p className="search-no-results">No messages found</p>
+          )}
+        </div>
+      )}
+
+      <div className="messages-container" >
         {loading ? (
           <div className="no-chats"><p>Loading messages...</p></div>
         ) : error ? (
@@ -859,20 +1860,54 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
           <div className="no-chats"><p>No messages yet</p></div>
         ) : (
           messages.map((message) => {
+            // Handle system messages (member added, removed, etc.)
+            if (message.isSystem || message.message_type === 'system') {
+              return (
+                <SystemMessage
+                  key={message.message_id}
+                  type={message.type || 'info'}
+                  message={message.message_text}
+                  timestamp={message.created_at}
+                  icon={message.type === 'member_added' ? UserPlus : undefined}
+                />
+              );
+            }
+
             const isSelf = message.sender_id === userId;
             const isGroup = chatInfo.chat_type === 'group';
             // For self messages, align right and do not show avatar or sender name
             if (isSelf) {
               return (
+                <>
                 <div
                   key={message.message_id}
-                  className="message message-sent"
+                  className={`message message-sent ${isCurrentResult(message.message_id) ? 'search-result-current' : ''} ${selectedMessages[message.message_id] ? 'selection' : ''}`}
                   style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}
+                  ref={(el) => {
+                    if (el) messageRefs.current[message.message_id] = el;
+                  }}
+                  onClick={() => {
+                  if(messageSelection) handleMessageSelection(message.message_id, true);
+                }}
                   onContextMenu={(e) => {
-                    e.preventDefault();
-                    setShowMessageMenu(message.message_id);
+                    setSelectedMessage(message);
+                    handleSentMessageContextMenu(e);
+                  }}
+                  onTouchStart={() => {
+                    setSelectedMessage(message);
+                  }}
+                  onTouchEnd={(e) => {
+                    messageContextMenu.handleLongPress(e, 500);
                   }}
                 >
+                  <button className='message_sent_reply_btn'
+                    onClick={ () => {
+                        handleReplyMessage(message);
+                      }
+                    }
+                  >
+                    <Reply size={16} />
+                  </button>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', maxWidth: '80%', flexDirection: 'column', gap: '8px' }}>
                     {message.attachments && message.attachments.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -883,9 +1918,35 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
                     )}
                     {message.message_text && (
                       <div className="message-bubble">
-                        <p className="message-text">{message.message_text}</p>
+                        {message.is_reply && message.referenced_message_id && (
+                          <div className="message-reply-reference">
+                            {(() => {
+                              const refMsg = getReferencedMessage(message.referenced_message_id);
+                              if (!refMsg) {
+                                return (
+                                  <div className="reply-ref-deleted">
+                                    <span className="reply-ref-sender">Deleted message</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <>
+                                  <div className="reply-ref-sender">
+                                    {refMsg.sender?.full_name || refMsg.sender?.username || 'Unknown'}
+                                  </div>
+                                  <div className="reply-ref-text">
+                                    {refMsg.message_text?.substring(0, 80) || '[Attachment]'}
+                                    {refMsg.message_text?.length > 80 ? '...' : ''}
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        <p className="message-text">{showSearch && searchQuery ? highlightText(message.message_text, searchQuery) : message.message_text}</p>
                         <div className="message-meta">
                           <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                          <MessageStatusIndicator messageId={message.message_id} statuses={messageStatuses[message.message_id]} currentUserId={userId} />
                         </div>
                       </div>
                     )}
@@ -894,36 +1955,38 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
                         <p className="message-text">Empty message</p>
                         <div className="message-meta">
                           <span className="message-time">{formatMessageTime(message.created_at)}</span>
+                          <MessageStatusIndicator messageId={message.message_id} statuses={messageStatuses[message.message_id]} currentUserId={userId} />
                         </div>
-                      </div>
-                    )}
-                    {showMessageMenu === message.message_id && (
-                      <div className="message-menu">
-                        <button onClick={() => handleMessageAction('mark-read', message.message_id)}>
-                          Mark as Read
-                        </button>
-                        <button onClick={() => handleMessageAction('delete-me', message.message_id)}>
-                          Delete for Me
-                        </button>
-                        <button onClick={() => handleMessageAction('delete-all', message.message_id)}>
-                          Delete for Everyone
-                        </button>
-                        <button onClick={() => setShowMessageMenu(null)}>Cancel</button>
                       </div>
                     )}
                   </div>
                 </div>
+                </>
               );
             }
             // For messages from others, align left, show avatar and sender name in group chat
             return (
+              <>
+
               <div
                 key={message.message_id}
-                className="message message-received"
+                className={`message message-received ${isCurrentResult(message.message_id) ? 'search-result-current' : ''} ${selectedMessages[message.message_id] ? 'selection' : ''}`}
                 style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}
+                ref={(el) => {
+                  if (el) messageRefs.current[message.message_id] = el;
+                }}
+                onClick={() => {
+                  if(messageSelection) handleMessageSelection(message.message_id, false);
+                }}
                 onContextMenu={(e) => {
-                  e.preventDefault();
-                  setShowMessageMenu(message.message_id);
+                  setSelectedMessage(message);
+                  handleReceivedMessageContextMenu(e);
+                }}
+                onTouchStart={() => {
+                  setSelectedMessage(message);
+                }}
+                onTouchEnd={(e) => {
+                  messageContextMenu.handleLongPress(e, 500);
                 }}
               >
                 {isGroup && (
@@ -970,7 +2033,32 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
                             : message.sender?.full_name || message.sender?.username || 'Unknown User'}
                         </div>
                       )}
-                      <p className="message-text">{message.message_text}</p>
+                      {message.is_reply && message.referenced_message_id && (
+                        <div className="message-reply-reference">
+                          {(() => {
+                            const refMsg = getReferencedMessage(message.referenced_message_id);
+                            if (!refMsg) {
+                              return (
+                                <div className="reply-ref-deleted">
+                                  <span className="reply-ref-sender">Deleted message</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <>
+                                <div className="reply-ref-sender">
+                                  {refMsg.sender?.full_name || refMsg.sender?.username || 'Unknown'}
+                                </div>
+                                <div className="reply-ref-text">
+                                  {refMsg.message_text?.substring(0, 80) || '[Attachment]'}
+                                  {refMsg.message_text?.length > 80 ? '...' : ''}
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      <p className="message-text">{showSearch && searchQuery ? highlightText(message.message_text, searchQuery) : message.message_text}</p>
                       <div className="message-meta">
                         <span className="message-time">{formatMessageTime(message.created_at)}</span>
                       </div>
@@ -994,19 +2082,21 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
                       </div>
                     </div>
                   )}
-                  {showMessageMenu === message.message_id && (
-                    <div className="message-menu">
-                      <button onClick={() => handleMessageAction('mark-read', message.message_id)}>
-                        Mark as Read
-                      </button>
-                      <button onClick={() => handleMessageAction('delete-me', message.message_id)}>
-                        Delete for Me
-                      </button>
-                      <button onClick={() => setShowMessageMenu(null)}>Cancel</button>
-                    </div>
-                  )}
                 </div>
+                <button className='message_received_reply_btn'
+                  onClick={ () => {
+                      handleReplyMessage(message);
+                    }
+                  }
+                >
+                  <Reply size={16} />
+                </button>
               </div>
+
+              {/* <button className='message_received_reply_btn'>
+                <Reply size={16} />
+              </button> */}
+              </>
             );
           })
         )}
@@ -1103,6 +2193,34 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
           </div>
         )}
 
+        {/* Reply Preview */}
+        {replyToMessage && (
+          <div className="reply-preview-container">
+            <div className="reply-preview">
+              <div className="reply-preview-header">
+                <span className="reply-label">Replying to</span>
+                <button
+                  type="button"
+                  className="reply-cancel-btn"
+                  onClick={() => setReplyToMessage(null)}
+                  title="Cancel reply"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="reply-preview-content">
+                <div className="reply-sender-name">
+                  {replyToMessage.sender?.full_name || replyToMessage.sender?.username || 'Unknown'}
+                </div>
+                <div className="reply-message-text">
+                  {replyToMessage.message_text?.substring(0, 100) || '[Attachment]'}
+                  {replyToMessage.message_text?.length > 100 ? '...' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Message Input */}
         <form 
           onSubmit={(e) => {
@@ -1167,6 +2285,20 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
         chatId={chatId}
         chatType={chatInfo.chat_type}
         otherUserId={chatInfo.otherUserId}
+        onMemberClick={handleMemberClick}
+      />
+
+      {/* Update Group Info Modal */}
+      <UpdateGroupInfoModal
+        isOpen={showUpdateGroupInfoModal}
+        onClose={() => setShowUpdateGroupInfoModal(false)}
+        chatId={chatId}
+        currentChatInfo={{
+          name: chatInfo.name,
+          description: chatInfo.description || '',
+          chat_image: chatImageUrl || chatInfo.chat_image
+        }}
+        onUpdateSuccess={handleGroupInfoUpdateSuccess}
       />
 
       {/* User Profile Modal */}
@@ -1176,6 +2308,109 @@ const ChatWindow = ({ chatId: propChatId, isEmbedded = false, onClose = null }) 
         chatId={null}
         chatType="private"
         otherUserId={selectedUserId}
+      />
+
+      {/* Message Context Menu */}
+      <ContextMenu
+        isOpen={messageContextMenu.isOpen}
+        x={messageContextMenu.x}
+        y={messageContextMenu.y}
+        items={getMessageContextMenuItems(selectedMessage)}
+        onClose={messageContextMenu.closeMenu}
+      />
+
+      {/* Header Context Menu */}
+      <ContextMenu
+        isOpen={headerContextMenu.isOpen}
+        x={headerContextMenu.x}
+        y={headerContextMenu.y}
+        items={getHeaderMenuItems()}
+        onClose={headerContextMenu.closeMenu}
+      />
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
+        <div className="modal-overlay" onClick={() => setShowAddMemberModal(false)}>
+          <div className="new-chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add Member</h2>
+              <button className="modal-close-btn" onClick={() => setShowAddMemberModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-search">
+              <Search className="search-icon" size={20} />
+              <input
+                type="text"
+                placeholder="Search by username..."
+                value={searchAddMember}
+                onChange={(e) => setSearchAddMember(e.target.value)}
+                className="modal-search-input"
+                autoFocus
+              />
+            </div>
+            <div className="modal-results">
+              {addMemberLoading ? (
+                <p className="modal-message">Searching...</p>
+              ) : searchAddMember && addMemberResults.length === 0 ? (
+                <p className="modal-message">No users found</p>
+              ) : addMemberResults.length > 0 ? (
+                addMemberResults.map((user) => (
+                  <div
+                    key={user.user_id}
+                    className="user-result-item"
+                    onClick={() => handleSelectUserToAddClick(user)}
+                  >
+                    <div className="user-avatar">
+                      {user.profile_pic ? (
+                        <img 
+                          src={user.profile_pic} 
+                          alt="profile"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <span className="avatar-text">
+                          {user.full_name 
+                            ? user.full_name.split(' ').length >= 2 
+                              ? (user.full_name.split(' ')[0][0] + user.full_name.split(' ')[user.full_name.split(' ').length - 1][0]).toUpperCase()
+                              : user.full_name.substring(0, 2).toUpperCase()
+                            : user.username.substring(0, 2).toUpperCase()
+                          }
+                        </span>
+                      )}
+                    </div>
+                    <div className="user-info">
+                      <h4>{user.full_name || user.username}</h4>
+                      <p>@{user.username}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="modal-message">Search for users to add to the group</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Confirmation */}
+      <ConfirmationBox
+        isOpen={showAddMemberConfirmation}
+        title="Add Member"
+        message={`Add ${selectedUserToAdd?.full_name || selectedUserToAdd?.username} to this group?`}
+        confirmText="Add"
+        cancelText="Cancel"
+        isLoading={isAddingMember}
+        onConfirm={handleSelectUserToAdd}
+        onCancel={() => {
+          setShowAddMemberConfirmation(false);
+          setSelectedUserToAdd(null);
+        }}
       />
       
       {/* Toast notifications */}

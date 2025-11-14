@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sun, Moon, Check } from 'lucide-react';
+import { Sun, Moon, Check } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 import { useTheme } from '../context/ThemeContext';
 import './Appearance.css';
 
@@ -45,13 +46,10 @@ const Appearance = () => {
 
   return (
     <div className="appearance-page">
-      <div className="appearance-header">
-        <button className="back-btn" onClick={() => navigate('/settings')}>
-          <ArrowLeft size={24} />
-        </button>
-        <h1>Appearance</h1>
-        <div style={{ width: 40 }}></div>
-      </div>
+      <PageHeader 
+        title="Appearance" 
+        onBack={() => navigate('/settings')}
+      />
 
       <div className="appearance-content">
         <div className="appearance-section">
