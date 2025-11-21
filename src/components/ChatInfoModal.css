@@ -183,15 +183,13 @@
   color: var(--accent-color);
 }
 
-
 .member-avatar {
-
   width: 60px;
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--border-color);
-  overflow: hidden; 
+  overflow: hidden;
   background: var(--input-background);
   display: flex;
   align-items: center;
@@ -235,4 +233,3 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-

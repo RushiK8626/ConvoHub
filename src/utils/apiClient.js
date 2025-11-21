@@ -4,11 +4,13 @@
  */
 
 // Ensure the configured base URL does not end with a slash to avoid `//` when joining paths
-const API_BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
+const API_BASE_URL = (
+  process.env.REACT_APP_API_URL || "http://localhost:3001"
+).replace(/\/+$/, "");
 
 // Debug: Log the API URL being used
-console.log('🌐 API Base URL:', API_BASE_URL);
-console.log('🔧 Environment:', process.env.NODE_ENV);
+console.log("🌐 API Base URL:", API_BASE_URL);
+console.log("🔧 Environment:", process.env.NODE_ENV);
 
 /**
  * Refresh the access token using the refresh token
@@ -16,39 +18,39 @@ console.log('🔧 Environment:', process.env.NODE_ENV);
  */
 const refreshAccessToken = async () => {
   try {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) {
-      console.error('No refresh token available');
+      console.error("No refresh token available");
       return null;
     }
 
     const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: String(refreshToken) }),
     });
 
     if (refreshRes.ok) {
       const refreshData = await refreshRes.json();
-      localStorage.setItem('accessToken', refreshData.accessToken);
-      
+      localStorage.setItem("accessToken", refreshData.accessToken);
+
       // Update user info if provided
       if (refreshData.user) {
-        localStorage.setItem('user', JSON.stringify(refreshData.user));
+        localStorage.setItem("user", JSON.stringify(refreshData.user));
       }
-      
+
       return refreshData.accessToken;
     } else {
-      console.error('Token refresh failed:', refreshRes.status);
+      console.error("Token refresh failed:", refreshRes.status);
       // If refresh fails, redirect to login
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
       return null;
     }
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    console.error("Error refreshing token:", error);
     return null;
   }
 };
@@ -60,12 +62,12 @@ const refreshAccessToken = async () => {
  * @returns {Promise<Response>} The fetch response
  */
 export const apiClient = async (url, options = {}) => {
-  let token = localStorage.getItem('accessToken');
-  
+  let token = localStorage.getItem("accessToken");
+
   // Add authorization header if not present
   const headers = {
     ...options.headers,
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   };
 
   // First attempt
@@ -76,9 +78,9 @@ export const apiClient = async (url, options = {}) => {
 
   // If unauthorized (401), try to refresh token and retry
   if (response.status === 401) {
-    console.log('Token expired, attempting refresh...');
+    console.log("Token expired, attempting refresh...");
     const newToken = await refreshAccessToken();
-    
+
     if (newToken) {
       // Retry the request with new token
       headers.Authorization = `Bearer ${newToken}`;
@@ -101,17 +103,19 @@ export const apiClient = async (url, options = {}) => {
 export const apiGet = async (url, options = {}) => {
   const response = await apiClient(url, {
     ...options,
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
   });
-  
+
   if (!response.ok) {
-    throw new Error(`API GET request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API GET request failed: ${response.status} ${response.statusText}`
+    );
   }
-  
+
   return response.json();
 };
 
@@ -125,18 +129,20 @@ export const apiGet = async (url, options = {}) => {
 export const apiPost = async (url, body, options = {}) => {
   const response = await apiClient(url, {
     ...options,
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
     body: JSON.stringify(body),
   });
-  
+
   if (!response.ok) {
-    throw new Error(`API POST request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API POST request failed: ${response.status} ${response.statusText}`
+    );
   }
-  
+
   return response.json();
 };
 
@@ -150,18 +156,20 @@ export const apiPost = async (url, body, options = {}) => {
 export const apiPut = async (url, body, options = {}) => {
   const response = await apiClient(url, {
     ...options,
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
     body: JSON.stringify(body),
   });
-  
+
   if (!response.ok) {
-    throw new Error(`API PUT request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API PUT request failed: ${response.status} ${response.statusText}`
+    );
   }
-  
+
   return response.json();
 };
 
@@ -174,17 +182,19 @@ export const apiPut = async (url, body, options = {}) => {
 export const apiDelete = async (url, options = {}) => {
   const response = await apiClient(url, {
     ...options,
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
   });
-  
+
   if (!response.ok) {
-    throw new Error(`API DELETE request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API DELETE request failed: ${response.status} ${response.statusText}`
+    );
   }
-  
+
   return response.json();
 };
 

@@ -1,16 +1,16 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Check } from 'lucide-react';
-import PageHeader from '../components/PageHeader';
-import { useTheme } from '../context/ThemeContext';
-import './Appearance.css';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Sun, Moon, Check } from "lucide-react";
+import PageHeader from "../components/PageHeader";
+import { useTheme } from "../context/ThemeContext";
+import "./Appearance.css";
 
 const ACCENT_COLORS = [
-  { id: 'blue', label: 'Blue', value: '#007AFF' },
-  { id: 'red', label: 'Red', value: '#FF3B30' },
-  { id: 'orange', label: 'Orange', value: '#FF9500' },
-  { id: 'green', label: 'Green', value: '#34C759' },
-  { id: 'purple', label: 'Purple', value: '#AF52DE' },
+  { id: "blue", label: "Blue", value: "#007AFF" },
+  { id: "red", label: "Red", value: "#FF3B30" },
+  { id: "orange", label: "Orange", value: "#FF9500" },
+  { id: "green", label: "Green", value: "#34C759" },
+  { id: "purple", label: "Purple", value: "#AF52DE" },
 ];
 
 const Appearance = () => {
@@ -19,21 +19,21 @@ const Appearance = () => {
 
   const themeOptions = [
     {
-      id: 'light',
-      label: 'Light Mode',
-      description: 'Clean and bright interface',
+      id: "light",
+      label: "Light Mode",
+      description: "Clean and bright interface",
       icon: Sun,
     },
     {
-      id: 'dark',
-      label: 'Dark Mode',
-      description: 'Pitch black theme for your eyes',
+      id: "dark",
+      label: "Dark Mode",
+      description: "Pitch black theme for your eyes",
       icon: Moon,
     },
   ];
 
   const handleThemeSelect = (themeId) => {
-    if (themeId === 'light') {
+    if (themeId === "light") {
       setLightTheme();
     } else {
       setDarkTheme();
@@ -46,16 +46,14 @@ const Appearance = () => {
 
   return (
     <div className="appearance-page">
-      <PageHeader 
-        title="Appearance" 
-        onBack={() => navigate('/settings')}
-      />
+      <PageHeader title="Appearance" onBack={() => navigate("/settings")} />
 
       <div className="appearance-content">
         <div className="appearance-section">
           <h2 className="section-title">Theme</h2>
           <p className="section-description">
-            Choose how ConvoHub looks to you. Select a single theme, or sync with your system.
+            Choose how ConvoHub looks to you. Select a single theme, or sync
+            with your system.
           </p>
 
           <div className="theme-options">
@@ -66,7 +64,7 @@ const Appearance = () => {
               return (
                 <button
                   key={option.id}
-                  className={`theme-option ${isSelected ? 'selected' : ''}`}
+                  className={`theme-option ${isSelected ? "selected" : ""}`}
                   onClick={() => handleThemeSelect(option.id)}
                 >
                   <div className="theme-option-icon">
@@ -89,16 +87,25 @@ const Appearance = () => {
 
         <div className="appearance-section">
           <h2 className="section-title">Accent Color</h2>
-          <p className="section-description">Choose your accent color for highlights and buttons.</p>
+          <p className="section-description">
+            Choose your accent color for highlights and buttons.
+          </p>
           <div className="theme-options">
             {ACCENT_COLORS.map((option) => (
               <button
                 key={option.id}
-                className={`theme-option ${accent === option.id ? 'selected' : ''}`}
-                style={{ borderColor: accent === option.id ? option.value : undefined }}
+                className={`theme-option ${
+                  accent === option.id ? "selected" : ""
+                }`}
+                style={{
+                  borderColor: accent === option.id ? option.value : undefined,
+                }}
                 onClick={() => handleAccentSelect(option.id)}
               >
-                <div className="theme-option-icon" style={{ background: option.value }} />
+                <div
+                  className="theme-option-icon"
+                  style={{ background: option.value }}
+                />
                 <div className="theme-option-info">
                   <h3>{option.label}</h3>
                 </div>

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Loader, X, RefreshCw } from 'lucide-react';
-import { getSmartReplies } from '../utils/aiClient';
-import './SmartReplies.css';
+import React, { useState, useEffect } from "react";
+import { Sparkles, Loader, X, RefreshCw } from "lucide-react";
+import { getSmartReplies } from "../utils/aiClient";
+import "./SmartReplies.css";
 
 const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
   const [replies, setReplies] = useState([]);
@@ -11,17 +11,17 @@ const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
 
   const fetchReplies = async () => {
     if (!chatId) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const suggestions = await getSmartReplies(chatId, 3);
       setReplies(suggestions);
       setVisible(true);
     } catch (err) {
-      console.error('Failed to fetch smart replies:', err);
-      setError('Failed to load suggestions');
+      console.error("Failed to fetch smart replies:", err);
+      setError("Failed to load suggestions");
       setVisible(false);
     } finally {
       setLoading(false);
@@ -67,7 +67,13 @@ const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
   if (!visible) return null;
 
   return (
-    <div className="smart-replies-container">
+    <div
+      className="smart-replies-container"
+      style={{
+        background: "var(--card-background)",
+        color: "var(--text-color)",
+      }}
+    >
       <div className="smart-replies-header">
         <div className="smart-replies-title">
           <Sparkles size={16} />
@@ -80,7 +86,7 @@ const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
             disabled={loading}
             title="Refresh suggestions"
           >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+            <RefreshCw size={16} className={loading ? "spinning" : ""} />
           </button>
           <button
             className="smart-replies-action-btn"
@@ -113,6 +119,11 @@ const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
               className="smart-reply-chip"
               onClick={() => handleSelectReply(reply)}
               disabled={disabled}
+              style={{
+                background: "var(--input-background)",
+                color: "var(--text-color)",
+                borderColor: "var(--border-color)",
+              }}
             >
               {reply}
             </button>
@@ -121,9 +132,7 @@ const SmartReplies = ({ chatId, onSelectReply, disabled = false }) => {
       )}
 
       {!loading && !error && replies.length === 0 && (
-        <div className="smart-replies-empty">
-          No suggestions available
-        </div>
+        <div className="smart-replies-empty">No suggestions available</div>
       )}
     </div>
   );

@@ -27,11 +27,11 @@
 }
 
 .toast-success {
-  border-left: 4px solid #4CAF50;
+  border-left: 4px solid #4caf50;
 }
 
 .toast-success .toast-icon {
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 .toast-error {
@@ -43,11 +43,11 @@
 }
 
 .toast-info {
-  border-left: 4px solid #2196F3;
+  border-left: 4px solid #2196f3;
 }
 
 .toast-info .toast-icon {
-  color: #2196F3;
+  color: #2196f3;
 }
 
 .toast-icon {

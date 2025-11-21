@@ -27,7 +27,7 @@
 }
 
 /* Dark mode adjustments */
-[data-theme='dark'] .context-menu {
+[data-theme="dark"] .context-menu {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -180,23 +180,23 @@
 }
 
 /* Dark mode specific styles */
-[data-theme='dark'] .context-menu-item:hover:not(.disabled) {
+[data-theme="dark"] .context-menu-item:hover:not(.disabled) {
   background-color: var(--hover-background);
 }
 
-[data-theme='dark'] .context-menu-item.danger:hover:not(.disabled) {
+[data-theme="dark"] .context-menu-item.danger:hover:not(.disabled) {
   background-color: rgba(255, 59, 48, 0.15);
 }
 
-[data-theme='dark'] .context-menu-item.warning:hover:not(.disabled) {
+[data-theme="dark"] .context-menu-item.warning:hover:not(.disabled) {
   background-color: rgba(255, 149, 0, 0.15);
 }
 
-[data-theme='dark'] .context-menu-item.success:hover:not(.disabled) {
+[data-theme="dark"] .context-menu-item.success:hover:not(.disabled) {
   background-color: rgba(52, 199, 89, 0.15);
 }
 
-[data-theme='dark'] .context-menu-item.primary:hover:not(.disabled) {
+[data-theme="dark"] .context-menu-item.primary:hover:not(.disabled) {
   background-color: var(--primary-light);
 }
 

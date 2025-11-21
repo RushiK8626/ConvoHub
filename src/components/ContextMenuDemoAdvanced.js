@@ -1,6 +1,6 @@
-import React from 'react';
-import ContextMenu from './ContextMenu';
-import useContextMenu from '../hooks/useContextMenu';
+import React from "react";
+import ContextMenu from "./ContextMenu";
+import useContextMenu from "../hooks/useContextMenu";
 import {
   Copy,
   Trash2,
@@ -12,8 +12,8 @@ import {
   Archive,
   Mute,
   Users,
-} from 'lucide-react';
-import './ContextMenuDemoAdvanced.css';
+} from "lucide-react";
+import "./ContextMenuDemoAdvanced.css";
 
 /**
  * Advanced Demo Component for ContextMenu with useContextMenu hook
@@ -28,122 +28,127 @@ const ContextMenuDemoAdvanced = () => {
   // Message context menu items
   const messageMenuItems = [
     {
-      id: 'copy',
-      label: 'Copy',
+      id: "copy",
+      label: "Copy",
       icon: <Copy size={16} />,
-      onClick: () => alert('✅ Message copied to clipboard'),
+      onClick: () => alert("✅ Message copied to clipboard"),
     },
     {
-      id: 'reply',
-      label: 'Reply',
+      id: "reply",
+      label: "Reply",
       icon: <Forward size={16} />,
-      onClick: () => alert('💬 Reply mode activated'),
+      onClick: () => alert("💬 Reply mode activated"),
     },
     {
-      id: 'divider1',
+      id: "divider1",
       divider: true,
     },
     {
-      id: 'pin',
-      label: 'Pin Message',
+      id: "pin",
+      label: "Pin Message",
       icon: <Pin size={16} />,
-      onClick: () => alert('📌 Message pinned'),
+      onClick: () => alert("📌 Message pinned"),
     },
     {
-      id: 'react',
-      label: 'React',
+      id: "react",
+      label: "React",
       icon: <Heart size={16} />,
-      onClick: () => alert('❤️ Reaction menu opened'),
+      onClick: () => alert("❤️ Reaction menu opened"),
     },
     {
-      id: 'divider2',
+      id: "divider2",
       divider: true,
     },
     {
-      id: 'delete',
-      label: 'Delete',
+      id: "delete",
+      label: "Delete",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('🗑️ Message deleted'),
+      color: "danger",
+      onClick: () => alert("🗑️ Message deleted"),
     },
   ];
 
   // Chat list context menu items
   const chatMenuItems = [
     {
-      id: 'archive',
-      label: 'Archive',
+      id: "archive",
+      label: "Archive",
       icon: <Archive size={16} />,
-      onClick: () => alert('📦 Chat archived'),
+      onClick: () => alert("📦 Chat archived"),
     },
     {
-      id: 'mute',
-      label: 'Mute',
+      id: "mute",
+      label: "Mute",
       icon: <Mute size={16} />,
-      onClick: () => alert('🔇 Chat muted'),
+      onClick: () => alert("🔇 Chat muted"),
     },
     {
-      id: 'pin-chat',
-      label: 'Pin',
+      id: "pin-chat",
+      label: "Pin",
       icon: <Pin size={16} />,
-      onClick: () => alert('📌 Chat pinned'),
+      onClick: () => alert("📌 Chat pinned"),
     },
     {
-      id: 'divider',
+      id: "divider",
       divider: true,
     },
     {
-      id: 'delete-chat',
-      label: 'Delete Chat',
+      id: "delete-chat",
+      label: "Delete Chat",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('🗑️ Chat deleted'),
+      color: "danger",
+      onClick: () => alert("🗑️ Chat deleted"),
     },
   ];
 
   // Three dots menu items
   const threeDotsMenuItems = [
     {
-      id: 'mute-all',
-      label: 'Mute All Notifications',
+      id: "mute-all",
+      label: "Mute All Notifications",
       icon: <Mute size={16} />,
-      onClick: () => alert('🔇 All notifications muted'),
+      onClick: () => alert("🔇 All notifications muted"),
     },
     {
-      id: 'members',
-      label: 'Group Members',
+      id: "members",
+      label: "Group Members",
       icon: <Users size={16} />,
-      onClick: () => alert('👥 Members list opened'),
+      onClick: () => alert("👥 Members list opened"),
     },
     {
-      id: 'divider',
+      id: "divider",
       divider: true,
     },
     {
-      id: 'report',
-      label: 'Report',
+      id: "report",
+      label: "Report",
       icon: <Flag size={16} />,
-      color: 'warning',
-      onClick: () => alert('⚠️ Report submitted'),
+      color: "warning",
+      onClick: () => alert("⚠️ Report submitted"),
     },
     {
-      id: 'delete-group',
-      label: 'Delete Group',
+      id: "delete-group",
+      label: "Delete Group",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('🗑️ Group deleted'),
+      color: "danger",
+      onClick: () => alert("🗑️ Group deleted"),
     },
   ];
 
   return (
     <div className="context-menu-demo-advanced">
       <h1>📋 Context Menu Component - Advanced Demo</h1>
-      <p className="intro-text">Using the useContextMenu hook for cleaner state management</p>
+      <p className="intro-text">
+        Using the useContextMenu hook for cleaner state management
+      </p>
 
       {/* Message Demo */}
       <section className="demo-section">
         <h2>💬 Message Context Menu</h2>
-        <p className="section-description">Right-click on the message to see actions like copy, reply, pin, or delete</p>
+        <p className="section-description">
+          Right-click on the message to see actions like copy, reply, pin, or
+          delete
+        </p>
         <div
           className="demo-message"
           onContextMenu={messageMenu.handleContextMenu}
@@ -158,8 +163,13 @@ const ContextMenuDemoAdvanced = () => {
       {/* Chat Demo */}
       <section className="demo-section">
         <h2>💬 Chat List Context Menu</h2>
-        <p className="section-description">Right-click on a chat to manage it (mute, archive, or delete)</p>
-        <div className="demo-chat-item" onContextMenu={chatMenu.handleContextMenu}>
+        <p className="section-description">
+          Right-click on a chat to manage it (mute, archive, or delete)
+        </p>
+        <div
+          className="demo-chat-item"
+          onContextMenu={chatMenu.handleContextMenu}
+        >
           <div className="chat-avatar">👤</div>
           <div className="chat-info">
             <h3>Chat with John Doe</h3>
@@ -171,7 +181,9 @@ const ContextMenuDemoAdvanced = () => {
       {/* Three Dots Menu Demo */}
       <section className="demo-section">
         <h2>⋯ Three Dots Menu (Button Click)</h2>
-        <p className="section-description">Click the three dots button to see group management options</p>
+        <p className="section-description">
+          Click the three dots button to see group management options
+        </p>
         <div className="demo-header">
           <div className="header-content">
             <h3>Project Managers Group</h3>
@@ -191,7 +203,7 @@ const ContextMenuDemoAdvanced = () => {
       <section className="demo-section info-box">
         <h3>🎯 How to Use the useContextMenu Hook</h3>
         <p>The hook simplifies context menu management:</p>
-        
+
         <div className="code-block">
           <pre>{`import useContextMenu from '../hooks/useContextMenu';
 
@@ -227,20 +239,42 @@ function MyComponent() {
 
         <h4>Hook Methods:</h4>
         <ul>
-          <li><code>handleContextMenu(e)</code> - Handle right-click events</li>
-          <li><code>handleThreeDotsClick(e, menuWidth, offset)</code> - Handle button clicks</li>
-          <li><code>handleLongPress(e, duration)</code> - Handle mobile long press</li>
-          <li><code>closeMenu()</code> - Close the menu</li>
-          <li><code>closeMenuWithCallback(callback)</code> - Close and execute callback</li>
-          <li><code>updateMenuPosition(x, y)</code> - Update menu position</li>
+          <li>
+            <code>handleContextMenu(e)</code> - Handle right-click events
+          </li>
+          <li>
+            <code>handleThreeDotsClick(e, menuWidth, offset)</code> - Handle
+            button clicks
+          </li>
+          <li>
+            <code>handleLongPress(e, duration)</code> - Handle mobile long press
+          </li>
+          <li>
+            <code>closeMenu()</code> - Close the menu
+          </li>
+          <li>
+            <code>closeMenuWithCallback(callback)</code> - Close and execute
+            callback
+          </li>
+          <li>
+            <code>updateMenuPosition(x, y)</code> - Update menu position
+          </li>
         </ul>
 
         <h4>Hook Properties:</h4>
         <ul>
-          <li><code>menu</code> - Full menu state object</li>
-          <li><code>isOpen</code> - Boolean menu visibility</li>
-          <li><code>x, y</code> - Current menu position</li>
-          <li><code>setMenu(state)</code> - Set menu state directly</li>
+          <li>
+            <code>menu</code> - Full menu state object
+          </li>
+          <li>
+            <code>isOpen</code> - Boolean menu visibility
+          </li>
+          <li>
+            <code>x, y</code> - Current menu position
+          </li>
+          <li>
+            <code>setMenu(state)</code> - Set menu state directly
+          </li>
         </ul>
       </section>
 
@@ -250,11 +284,17 @@ function MyComponent() {
         <div className="tips-grid">
           <div className="tip">
             <h4>📍 Position Handling</h4>
-            <p>The hook's <code>handleThreeDotsClick</code> automatically prevents menus from going off-screen</p>
+            <p>
+              The hook's <code>handleThreeDotsClick</code> automatically
+              prevents menus from going off-screen
+            </p>
           </div>
           <div className="tip">
             <h4>📱 Mobile Support</h4>
-            <p>Use <code>handleLongPress</code> for long-press on mobile devices (default 500ms)</p>
+            <p>
+              Use <code>handleLongPress</code> for long-press on mobile devices
+              (default 500ms)
+            </p>
           </div>
           <div className="tip">
             <h4>⌨️ Keyboard</h4>
@@ -262,11 +302,16 @@ function MyComponent() {
           </div>
           <div className="tip">
             <h4>🎨 Styling</h4>
-            <p>All menu colors automatically follow your app's theme (light/dark)</p>
+            <p>
+              All menu colors automatically follow your app's theme (light/dark)
+            </p>
           </div>
           <div className="tip">
             <h4>🔄 Reusability</h4>
-            <p>Create multiple instances with different menu items for various UI elements</p>
+            <p>
+              Create multiple instances with different menu items for various UI
+              elements
+            </p>
           </div>
           <div className="tip">
             <h4>⚡ Performance</h4>

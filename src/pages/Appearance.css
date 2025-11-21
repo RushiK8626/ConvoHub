@@ -7,9 +7,16 @@
   width: 100%;
 }
 
-@media (max-width: 899px) {
+@media (max-width: 600px) {
   .appearance-page {
-    max-width: 640px;
+    max-width: 100%;
+    margin: auto;
+  }
+}
+
+@media (min-width: 600px) {
+  .appearance-page {
+    max-width: 95%;
     margin: 0 auto;
   }
 }
@@ -145,7 +152,7 @@
 .preview-name {
   height: 12px;
   width: 100px;
-  background-color: #FFFFFF;
+  background-color: #ffffff;
   opacity: 0.3;
   border-radius: 4px;
   margin-bottom: 6px;

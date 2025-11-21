@@ -70,13 +70,17 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: "Monaco", "Courier New", monospace;
   color: var(--primary-color);
 }
 
 /* Message Demo */
 .demo-message {
-  background: linear-gradient(135deg, var(--message-received-bg) 0%, var(--hover-background) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--message-received-bg) 0%,
+    var(--hover-background) 100%
+  );
   border: 2px dashed var(--border-color);
   border-radius: 14px;
   padding: 16px;
@@ -109,7 +113,11 @@
   align-items: center;
   gap: 14px;
   padding: 14px;
-  background: linear-gradient(135deg, var(--hover-background) 0%, var(--card-background) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--hover-background) 0%,
+    var(--card-background) 100%
+  );
   border: 2px dashed var(--border-color);
   border-radius: 14px;
   cursor: context-menu;
@@ -127,7 +135,11 @@
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-light) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-light) 0%,
+    var(--primary-light) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,7 +174,11 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: linear-gradient(135deg, var(--hover-background) 0%, var(--card-background) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--hover-background) 0%,
+    var(--card-background) 100%
+  );
   border: 2px dashed var(--border-color);
   border-radius: 14px;
   transition: all 0.2s ease;
@@ -223,7 +239,7 @@
 
 .code-block pre {
   margin: 0;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: "Monaco", "Courier New", monospace;
   font-size: 12px;
   line-height: 1.6;
   color: var(--text-color);
@@ -249,7 +265,7 @@
 }
 
 .demo-section li:before {
-  content: '▸';
+  content: "▸";
   position: absolute;
   left: 0;
   color: var(--primary-color);
@@ -258,7 +274,11 @@
 
 /* Info Box */
 .info-box {
-  background: linear-gradient(135deg, var(--primary-light) 0%, rgba(10, 132, 255, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-light) 0%,
+    rgba(10, 132, 255, 0.05) 100%
+  );
   border: 2px solid var(--primary-color);
   border-left: 4px solid var(--primary-color);
 }

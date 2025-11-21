@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import './ContextMenu.css';
+import React, { useEffect, useRef } from "react";
+import "./ContextMenu.css";
 
 /**
  * Reusable Context/Dropdown Menu Component
@@ -11,7 +11,7 @@ import './ContextMenu.css';
  * @param {function} onClose - Callback when menu should close
  * @param {string} theme - Optional theme class (light/dark)
  */
-const ContextMenu = ({ isOpen, x, y, items, onClose, theme = 'light' }) => {
+const ContextMenu = ({ isOpen, x, y, items, onClose, theme = "light" }) => {
   const menuRef = useRef(null);
 
   // Close menu when clicking outside
@@ -26,17 +26,17 @@ const ContextMenu = ({ isOpen, x, y, items, onClose, theme = 'light' }) => {
 
     // Close menu on Escape key
     const handleEscapeKey = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isOpen, onClose]);
 
@@ -71,8 +71,8 @@ const ContextMenu = ({ isOpen, x, y, items, onClose, theme = 'light' }) => {
             {/* Menu Item */}
             {!item.divider && (
               <button
-                className={`context-menu-item ${item.color || 'default'} ${
-                  item.disabled ? 'disabled' : ''
+                className={`context-menu-item ${item.color || "default"} ${
+                  item.disabled ? "disabled" : ""
                 }`}
                 onClick={() => handleItemClick(item)}
                 disabled={item.disabled}

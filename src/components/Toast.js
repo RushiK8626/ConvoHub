@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
-import './Toast.css';
+import React, { useEffect } from "react";
+import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
+import "./Toast.css";
 
-const Toast = ({ message, type = 'success', duration = 3000, onClose }) => {
+const Toast = ({ message, type = "success", duration = 3000, onClose }) => {
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -14,11 +14,11 @@ const Toast = ({ message, type = 'success', duration = 3000, onClose }) => {
 
   const getIcon = () => {
     switch (type) {
-      case 'success':
+      case "success":
         return <CheckCircle size={20} />;
-      case 'error':
+      case "error":
         return <XCircle size={20} />;
-      case 'info':
+      case "info":
         return <AlertCircle size={20} />;
       default:
         return <CheckCircle size={20} />;

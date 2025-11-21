@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import './AttachmentPreview.css';
+import React, { useEffect, useState } from "react";
+import "./AttachmentPreview.css";
 
 const AttachmentPreview = ({ attachment }) => {
   const [src, setSrc] = useState(null);
@@ -8,22 +8,29 @@ const AttachmentPreview = ({ attachment }) => {
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [error, setError] = useState(null);
 
-  const base = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const base = process.env.REACT_APP_API_URL || "http://localhost:3001";
 
   // Extract filename from various possible attachment properties
   const getFilename = () => {
-    const fileUrl = attachment.file_url || attachment.fileUrl || attachment.url || attachment.path || attachment.file_name || attachment.fileName || attachment.name;
-    if (!fileUrl) return 'file';
-    if (fileUrl.startsWith('http')) return fileUrl.split('/').pop();
-    if (fileUrl.includes('/uploads/')) return fileUrl.split('/uploads/').pop();
-    return fileUrl.split('/').pop();
+    const fileUrl =
+      attachment.file_url ||
+      attachment.fileUrl ||
+      attachment.url ||
+      attachment.path ||
+      attachment.file_name ||
+      attachment.fileName ||
+      attachment.name;
+    if (!fileUrl) return "file";
+    if (fileUrl.startsWith("http")) return fileUrl.split("/").pop();
+    if (fileUrl.includes("/uploads/")) return fileUrl.split("/uploads/").pop();
+    return fileUrl.split("/").pop();
   };
 
   const filename = getFilename();
 
   // Check if attachment is an image based on mime type or extension
   const isImage = () => {
-    if (mimeType) return mimeType.startsWith('image/');
+    if (mimeType) return mimeType.startsWith("image/");
     return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(filename);
   };
 
@@ -36,9 +43,9 @@ const AttachmentPreview = ({ attachment }) => {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem("accessToken");
         if (!token) {
-          setError('No authentication token available');
+          setError("No authentication token available");
           setLoading(false);
           return;
         }
@@ -48,12 +55,14 @@ const AttachmentPreview = ({ attachment }) => {
 
         const res = await fetch(fetchUrl, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!res.ok) {
-          throw new Error(`Failed to fetch attachment: ${res.status} ${res.statusText}`);
+          throw new Error(
+            `Failed to fetch attachment: ${res.status} ${res.statusText}`
+          );
         }
 
         const blob = await res.blob();
@@ -61,12 +70,14 @@ const AttachmentPreview = ({ attachment }) => {
 
         if (!cancelled) {
           setSrc(objectUrl);
-          setMimeType(blob.type || attachment.mime_type || attachment.type || null);
+          setMimeType(
+            blob.type || attachment.mime_type || attachment.type || null
+          );
         }
       } catch (err) {
-        console.error('❌ Attachment load failed:', err);
+        console.error("Attachment load failed:", err);
         if (!cancelled) {
-          setError(err.message || 'Failed to load attachment');
+          setError(err.message || "Failed to load attachment");
         }
       } finally {
         if (!cancelled) {
@@ -83,7 +94,7 @@ const AttachmentPreview = ({ attachment }) => {
         try {
           URL.revokeObjectURL(objectUrl);
         } catch (e) {
-          console.error('Error revoking object URL:', e);
+          console.error("Error revoking object URL:", e);
         }
       }
     };
@@ -91,9 +102,9 @@ const AttachmentPreview = ({ attachment }) => {
 
   const downloadAttachment = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
       if (!token) {
-        alert('No authentication token available');
+        alert("No authentication token available");
         return;
       }
 
@@ -101,29 +112,31 @@ const AttachmentPreview = ({ attachment }) => {
 
       const res = await fetch(fetchUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
-        console.error('❌ Failed to download attachment');
-        alert('Failed to download attachment');
+        console.error("❌ Failed to download attachment");
+        alert("Failed to download attachment");
         return;
       }
 
       const blob = await res.blob();
-      const contentDisposition = res.headers.get('Content-Disposition');
+      const contentDisposition = res.headers.get("Content-Disposition");
       let downloadName = filename;
 
       if (contentDisposition) {
-        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?\"?([^;"\\n]+)/i);
+        const match = contentDisposition.match(
+          /filename\*?=(?:UTF-8'')?\"?([^;"\\n]+)/i
+        );
         if (match) {
           downloadName = decodeURIComponent(match[1]);
         }
       }
 
       const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = objectUrl;
       a.download = downloadName;
       document.body.appendChild(a);
@@ -135,20 +148,20 @@ const AttachmentPreview = ({ attachment }) => {
         try {
           URL.revokeObjectURL(objectUrl);
         } catch (e) {
-          console.error('Error revoking download URL:', e);
+          console.error("Error revoking download URL:", e);
         }
       }, 10000);
     } catch (err) {
-      console.error('❌ Download error:', err);
-      alert('Error downloading attachment');
+      console.error("❌ Download error:", err);
+      alert("Error downloading attachment");
     }
   };
 
   const openAttachment = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
       if (!token) {
-        alert('No authentication token available');
+        alert("No authentication token available");
         return;
       }
 
@@ -156,29 +169,29 @@ const AttachmentPreview = ({ attachment }) => {
 
       const res = await fetch(fetchUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
-        throw new Error('Failed to open attachment');
+        throw new Error("Failed to open attachment");
       }
 
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
-      window.open(objectUrl, '_blank');
+      window.open(objectUrl, "_blank");
 
       // Clean up after 60 seconds
       setTimeout(() => {
         try {
           URL.revokeObjectURL(objectUrl);
         } catch (e) {
-          console.error('Error revoking open URL:', e);
+          console.error("Error revoking open URL:", e);
         }
       }, 60 * 1000);
     } catch (err) {
-      console.error('❌ Open attachment error:', err);
-      alert('Failed to open attachment');
+      console.error("❌ Open attachment error:", err);
+      alert("Failed to open attachment");
     }
   };
 
@@ -199,7 +212,7 @@ const AttachmentPreview = ({ attachment }) => {
         <div className="attachment-icon">❌</div>
         <div className="attachment-info">
           <div className="attachment-name">{filename}</div>
-          <div style={{ fontSize: '12px', color: '#a00' }}>{error}</div>
+          <div style={{ fontSize: "12px", color: "#a00" }}>{error}</div>
         </div>
       </div>
     );
@@ -221,24 +234,34 @@ const AttachmentPreview = ({ attachment }) => {
   if (isImage()) {
     return (
       <>
-        <div className="attachment-preview image" onClick={() => setShowFullscreen(true)} style={{ cursor: 'pointer' }}>
-          <img
-            src={src}
-            alt={filename}
-            className="attachment-thumb"
-          />
+        <div
+          className="attachment-preview image"
+          onClick={() => setShowFullscreen(true)}
+          style={{ cursor: "pointer" }}
+        >
+          <img src={src} alt={filename} className="attachment-thumb" />
         </div>
         {showFullscreen && (
-          <div className="attachment-fullscreen" onClick={() => setShowFullscreen(false)}>
+          <div
+            className="attachment-fullscreen"
+            onClick={() => setShowFullscreen(false)}
+          >
             <div className="fullscreen-content">
               <img src={src} alt={filename} className="fullscreen-image" />
-              <button className="close-fullscreen" onClick={() => setShowFullscreen(false)}>
+              <button
+                className="close-fullscreen"
+                onClick={() => setShowFullscreen(false)}
+              >
                 ×
               </button>
-              <button className="download-fullscreen" onClick={(e) => {
-                e.stopPropagation();
-                downloadAttachment();
-              }} title="Download">
+              <button
+                className="download-fullscreen"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadAttachment();
+                }}
+                title="Download"
+              >
                 💾
               </button>
             </div>
@@ -250,7 +273,11 @@ const AttachmentPreview = ({ attachment }) => {
 
   // File preview (non-image)
   return (
-    <div className="attachment-preview file" onClick={openAttachment} style={{ cursor: 'pointer' }}>
+    <div
+      className="attachment-preview file"
+      onClick={openAttachment}
+      style={{ cursor: "pointer" }}
+    >
       <div className="attachment-icon">📎</div>
       <div className="attachment-info">
         <div className="attachment-name">{filename}</div>

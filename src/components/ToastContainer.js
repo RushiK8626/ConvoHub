@@ -1,6 +1,6 @@
-import React from 'react';
-import Toast from './Toast';
-import './Toast.css';
+import React from "react";
+import Toast from "./Toast";
+import "./Toast.css";
 
 const ToastContainer = ({ toasts, removeToast }) => {
   if (!toasts || toasts.length === 0) return null;

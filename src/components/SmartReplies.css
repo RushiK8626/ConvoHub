@@ -5,8 +5,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: var(--primary-color, #007bff);
-  color: white;
+  background: var(--accent-color);
+  color: var(--message-sent-text);
   border: none;
   border-radius: 20px;
   font-size: 13px;
@@ -17,9 +17,9 @@
 }
 
 .smart-replies-trigger:hover:not(:disabled) {
-  background: var(--primary-hover, #0056b3);
+  opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .smart-replies-trigger:disabled {
@@ -28,11 +28,12 @@
 }
 
 .smart-replies-container {
-  background: var(--message-bg, #f8f9fa);
+  background: var(--card-background) !important;
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px;
   margin: 8px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   animation: slideUp 0.3s ease;
 }
 
@@ -60,11 +61,11 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #333);
+  color: var(--text-color);
 }
 
 .smart-replies-title svg {
-  color: var(--primary-color, #007bff);
+  color: var(--accent-color);
 }
 
 .smart-replies-actions {
@@ -87,8 +88,8 @@
 }
 
 .smart-replies-action-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--text-primary, #333);
+  background: var(--hover-background);
+  color: var(--text-color);
 }
 
 .smart-replies-action-btn:disabled {
@@ -120,9 +121,9 @@
 
 .smart-reply-chip {
   padding: 10px 16px;
-  background: white;
-  color: var(--text-primary, #333);
-  border: 1.5px solid var(--border-color, #dee2e6);
+  background: var(--input-background) !important;
+  color: var(--text-color) !important;
+  border: 1.5px solid var(--border-color);
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
@@ -133,11 +134,11 @@
 }
 
 .smart-reply-chip:hover:not(:disabled) {
-  background: var(--primary-color, #007bff);
-  color: white;
-  border-color: var(--primary-color, #007bff);
+  background: var(--accent-color);
+  color: var(--message-sent-text);
+  border-color: var(--accent-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 
 .smart-reply-chip:active:not(:disabled) {
@@ -167,28 +168,6 @@
   }
   to {
     transform: rotate(360deg);
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .smart-replies-container {
-    background: var(--message-bg-dark, #2a2a2a);
-  }
-
-  .smart-replies-title {
-    color: var(--text-primary-dark, #e0e0e0);
-  }
-
-  .smart-reply-chip {
-    background: var(--bg-dark, #1a1a1a);
-    color: var(--text-primary-dark, #e0e0e0);
-    border-color: var(--border-color-dark, #444);
-  }
-
-  .smart-reply-chip:hover:not(:disabled) {
-    background: var(--primary-color, #007bff);
-    color: white;
   }
 }
 

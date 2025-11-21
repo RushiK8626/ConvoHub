@@ -1,6 +1,6 @@
-import React from 'react';
-import { MessageCircle, Users } from 'lucide-react';
-import './ChatOptionsMenu.css';
+import React from "react";
+import { MessageCircle, Users } from "lucide-react";
+import "./ChatOptionsMenu.css";
 
 const ChatOptionsMenu = ({ isOpen, onNewChat, onNewGroup }) => {
   if (!isOpen) return null;

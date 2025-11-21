@@ -1,25 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Loader, RefreshCw } from 'lucide-react';
-import { getConversationStarters } from '../utils/aiClient';
-import './ConversationStarters.css';
+import React, { useState, useEffect } from "react";
+import { MessageSquare, Loader, RefreshCw } from "lucide-react";
+import { getConversationStarters } from "../utils/aiClient";
+import "./ConversationStarters.css";
 
-const ConversationStarters = ({ chatId, onSelectStarter, disabled = false }) => {
+const ConversationStarters = ({
+  chatId,
+  onSelectStarter,
+  disabled = false,
+}) => {
   const [starters, setStarters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchStarters = async () => {
     if (!chatId) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await getConversationStarters(chatId);
       setStarters(result.starters || []);
     } catch (err) {
-      console.error('Failed to fetch conversation starters:', err);
-      setError('Failed to load suggestions');
+      console.error("Failed to fetch conversation starters:", err);
+      setError("Failed to load suggestions");
     } finally {
       setLoading(false);
     }
@@ -78,10 +82,10 @@ const ConversationStarters = ({ chatId, onSelectStarter, disabled = false }) => 
           disabled={loading}
           title="Refresh suggestions"
         >
-          <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+          <RefreshCw size={16} className={loading ? "spinning" : ""} />
         </button>
       </div>
-      
+
       <div className="starters-grid">
         {starters.map((starter, index) => (
           <button

@@ -1,12 +1,12 @@
-import React from 'react';
-import './ConfirmationBox.css';
+import React from "react";
+import "./ConfirmationBox.css";
 
 const ConfirmationBox = ({
   isOpen,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = "Confirm",
+  cancelText = "Cancel",
   onConfirm,
   onCancel,
   isDangerous = false,
@@ -34,11 +34,13 @@ const ConfirmationBox = ({
             {cancelText}
           </button>
           <button
-            className={`confirmation-btn confirmation-confirm-btn ${isDangerous ? 'dangerous' : ''}`}
+            className={`confirmation-btn confirmation-confirm-btn ${
+              isDangerous ? "dangerous" : ""
+            }`}
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? 'Loading...' : confirmText}
+            {isLoading ? "Loading..." : confirmText}
           </button>
         </div>
       </div>

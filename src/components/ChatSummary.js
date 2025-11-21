@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
-import { FileText, Loader, X, List, AlignLeft, CheckSquare } from 'lucide-react';
-import { summarizeChat } from '../utils/aiClient';
-import './ChatSummary.css';
+import React, { useState } from "react";
+import {
+  FileText,
+  Loader,
+  X,
+  List,
+  AlignLeft,
+  CheckSquare,
+} from "lucide-react";
+import { summarizeChat } from "../utils/aiClient";
+import "./ChatSummary.css";
 
 const SUMMARY_TYPES = [
-  { value: 'brief', label: 'Brief', icon: AlignLeft, description: 'Quick overview' },
-  { value: 'detailed', label: 'Detailed', icon: FileText, description: 'In-depth summary' },
-  { value: 'bullet', label: 'Bullet Points', icon: List, description: 'Key points' },
+  {
+    value: "brief",
+    label: "Brief",
+    icon: AlignLeft,
+    description: "Quick overview",
+  },
+  {
+    value: "detailed",
+    label: "Detailed",
+    icon: FileText,
+    description: "In-depth summary",
+  },
+  {
+    value: "bullet",
+    label: "Bullet Points",
+    icon: List,
+    description: "Key points",
+  },
 ];
 
 const ChatSummary = ({ chatId, onClose }) => {
-  const [summary, setSummary] = useState('');
-  const [summaryType, setSummaryType] = useState('brief');
+  const [summary, setSummary] = useState("");
+  const [summaryType, setSummaryType] = useState("brief");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,10 +44,10 @@ const ChatSummary = ({ chatId, onClose }) => {
 
     try {
       const result = await summarizeChat(chatId, type);
-      setSummary(result.summary || '');
+      setSummary(result.summary || "");
     } catch (err) {
-      console.error('Summary generation error:', err);
-      setError('Failed to generate summary. Please try again.');
+      console.error("Summary generation error:", err);
+      setError("Failed to generate summary. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -33,7 +55,10 @@ const ChatSummary = ({ chatId, onClose }) => {
 
   return (
     <div className="chat-summary-overlay" onClick={onClose}>
-      <div className="chat-summary-container" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="chat-summary-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="summary-header">
           <div className="summary-title">
             <FileText size={20} />
@@ -52,14 +77,18 @@ const ChatSummary = ({ chatId, onClose }) => {
               return (
                 <button
                   key={type.value}
-                  className={`summary-type-btn ${summaryType === type.value ? 'active' : ''}`}
+                  className={`summary-type-btn ${
+                    summaryType === type.value ? "active" : ""
+                  }`}
                   onClick={() => handleGenerateSummary(type.value)}
                   disabled={loading}
                 >
                   <Icon size={18} />
                   <div className="summary-type-info">
                     <span className="summary-type-label">{type.label}</span>
-                    <span className="summary-type-desc">{type.description}</span>
+                    <span className="summary-type-desc">
+                      {type.description}
+                    </span>
                   </div>
                   {summaryType === type.value && !loading && summary && (
                     <CheckSquare size={18} className="check-icon" />
@@ -78,22 +107,19 @@ const ChatSummary = ({ chatId, onClose }) => {
           )}
 
           {/* Error State */}
-          {error && (
-            <div className="summary-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="summary-error">{error}</div>}
 
           {/* Summary Display */}
           {!loading && !error && summary && (
             <div className="summary-result">
               <div className="summary-result-header">
                 <FileText size={16} />
-                <span>{SUMMARY_TYPES.find(t => t.value === summaryType)?.label} Summary</span>
+                <span>
+                  {SUMMARY_TYPES.find((t) => t.value === summaryType)?.label}{" "}
+                  Summary
+                </span>
               </div>
-              <div className="summary-text">
-                {summary}
-              </div>
+              <div className="summary-text">{summary}</div>
             </div>
           )}
 

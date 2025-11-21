@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Bell } from 'lucide-react';
-import { useFetchNotifications } from '../hooks/useFetchNotifications';
-import './NotificationCenter.css';
+import React, { useState } from "react";
+import { Bell } from "lucide-react";
+import { useFetchNotifications } from "../hooks/useFetchNotifications";
+import "./NotificationCenter.css";
 
 export const NotificationCenter = ({ token, userId }) => {
   const {
@@ -11,7 +11,8 @@ export const NotificationCenter = ({ token, userId }) => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    clearAllNotifications
+    clearAllNotifications,
+    fetchNotifications,
   } = useFetchNotifications(token, userId);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -21,7 +22,7 @@ export const NotificationCenter = ({ token, userId }) => {
     if (!notification.is_read) {
       markAsRead(notification.notification_id);
     }
-    
+
     if (notification.action_url) {
       window.location.href = notification.action_url;
     }
@@ -29,7 +30,7 @@ export const NotificationCenter = ({ token, userId }) => {
 
   const handleClearAll = async () => {
     if (notifications.length === 0) return;
-    
+
     setShowClearConfirm(true);
   };
 
@@ -38,17 +39,27 @@ export const NotificationCenter = ({ token, userId }) => {
     setShowClearConfirm(false);
   };
 
+  const handleNotificationPanelOpen = async () => {
+    if (!isOpen) {
+      // Only fetch when opening the panel
+      await fetchNotifications();
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="notification-center">
       {/* Notification Bell Icon */}
       <button
         className="notification-bell"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleNotificationPanelOpen}
         title="Notifications"
       >
         <Bell size={24} strokeWidth={2} />
         {unreadCount > 0 && (
-          <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+          <span className="notification-badge">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
         )}
       </button>
 
@@ -112,7 +123,7 @@ export const NotificationCenter = ({ token, userId }) => {
                 <div
                   key={notification.notification_id}
                   className={`notification-item ${
-                    !notification.is_read ? 'unread' : ''
+                    !notification.is_read ? "unread" : ""
                   }`}
                 >
                   <div

@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  color: #333;
+  color: var(--text-color);
 }
 
 .notification-bell svg {
@@ -37,7 +37,7 @@
   top: 0;
   right: 0;
   background-color: #ff4757;
-  color: white;
+  color: #ffffff;
   font-size: 11px;
   font-weight: bold;
   padding: 2px 6px;
@@ -53,10 +53,10 @@
   top: 100%;
   right: 0;
   width: 350px;
-  background: var(--card-background);
-  border: 1px solid #e0e0e0;
+  background: var(--modal-background);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow);
   margin-top: 8px;
   max-height: 500px;
   display: flex;
@@ -81,7 +81,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .notification-header h3 {
@@ -89,6 +89,7 @@
   font-size: 16px;
   font-weight: 600;
   flex: 1;
+  color: var(--text-color);
 }
 
 .header-actions {
@@ -110,11 +111,11 @@
 }
 
 .mark-all-read-btn {
-  color: #0099ff;
+  color: var(--accent-color);
 }
 
 .mark-all-read-btn:hover {
-  color: #0077cc;
+  opacity: 0.8;
   text-decoration: underline;
 }
 
@@ -143,10 +144,10 @@
 }
 
 .confirmation-dialog {
-  background: white;
+  background: var(--card-background);
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px var(--shadow);
   text-align: center;
   min-width: 280px;
   animation: popIn 0.3s ease;
@@ -166,7 +167,7 @@
 .confirmation-dialog p {
   margin: 0 0 20px 0;
   font-size: 14px;
-  color: #333;
+  color: var(--text-color);
   font-weight: 500;
 }
 
@@ -199,12 +200,12 @@
 }
 
 .confirm-btn.cancel {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: var(--hover-background);
+  color: var(--text-color);
 }
 
 .confirm-btn.cancel:hover {
-  background-color: #d0d0d0;
+  opacity: 0.8;
   transform: translateY(-1px);
 }
 
@@ -222,19 +223,19 @@
 }
 
 .notification-list::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: var(--border-color);
   border-radius: 3px;
 }
 
 .notification-list::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: var(--text-secondary);
 }
 
 .loading,
 .empty {
   padding: 40px 16px;
   text-align: center;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -243,20 +244,21 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 12px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s ease;
 }
 
 .notification-item:hover {
-  background-color: #f9f9f9;
+  background-color: var(--hover-background);
 }
 
 .notification-item.unread {
-  background-color: #f0f8ff;
+  background-color: var(--primary-light);
 }
 
 .notification-item.unread:hover {
-  background-color: #e6f2ff;
+  background-color: var(--primary-light);
+  opacity: 0.9;
 }
 
 .notification-content {
@@ -268,7 +270,7 @@
 .notification-message {
   margin: 0 0 4px 0;
   font-size: 14px;
-  color: #333;
+  color: var(--text-color);
   word-break: break-word;
   line-height: 1.4;
 }
@@ -279,7 +281,7 @@
 
 .notification-time {
   display: block;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -287,7 +289,7 @@
 .delete-btn {
   background: none;
   border: none;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
   padding: 4px 8px;

@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import SimpleBar from "simplebar-react";
+import "simplebar-react/dist/simplebar.min.css";
 import {
   UserRound,
   LockKeyhole,
@@ -10,17 +12,21 @@ import {
   LifeBuoy,
   LogOut,
   ChevronRight,
-  Ban
-} from 'lucide-react';
-import BottomTabBar from '../components/BottomTabBar';
-import PageHeader from '../components/PageHeader';
-import Profile from './Profile';
-import Appearance from './Appearance';
-import BlockedUsers from './BlockedUsers';
-import { NotificationSettings } from '../components/NotificationSettings';
-import { unsubscribeFromPushNotifications } from '../utils/notification.utils';
-import { getSidebarWidth, setSidebarWidth, SIDEBAR_CONFIG } from '../utils/sidebarWidth';
-import './Settings.css';
+  Ban,
+} from "lucide-react";
+import BottomTabBar from "../components/BottomTabBar";
+import PageHeader from "../components/PageHeader";
+import Profile from "./Profile";
+import Appearance from "./Appearance";
+import BlockedUsers from "./BlockedUsers";
+import NotificationSettings from "./NotificationSettings";
+import { unsubscribeFromPushNotifications } from "../utils/notification.utils";
+import {
+  getSidebarWidth,
+  setSidebarWidth,
+  SIDEBAR_CONFIG,
+} from "../utils/sidebarWidth";
+import "./Settings.css";
 
 const Settings = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
@@ -31,130 +37,153 @@ const Settings = ({ isEmbedded = false }) => {
   });
   const containerRef = useRef(null);
   const isResizingRef = useRef(false);
+  const headerRef = useRef(null);
+  const bottomTabBarRef = useRef(null);
+  const [settingsMenuHeight, setSettingsMenuHeight] = useState(
+    "calc(100vh - 200px)"
+  );
   const [userData, setUserData] = useState(null);
 
   // Get user data from localStorage
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
     setUserData(user);
   }, []);
 
+  // Calculate settings menu height dynamically
+  useEffect(() => {
+    const calculateHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const bottomTabHeight = bottomTabBarRef.current?.offsetHeight || 0;
+      const totalOffset = headerHeight + bottomTabHeight + 20; // 20px for padding/margin
+      setSettingsMenuHeight(`calc(100vh - ${totalOffset}px)`);
+    };
+
+    calculateHeight();
+    window.addEventListener("resize", calculateHeight);
+    return () => window.removeEventListener("resize", calculateHeight);
+  }, [selectedSetting]);
+
   const settingsSections = [
     {
-      title: 'Account',
+      title: "Account",
       items: [
         {
-          id: 'profile',
+          id: "profile",
           icon: UserRound,
-          label: 'Profile',
-          path: '/profile',
-          description: 'Manage your profile information',
-          component: Profile
+          label: "Profile",
+          path: "/profile",
+          description: "Manage your profile information",
+          component: Profile,
         },
         {
-          id: 'privacy',
+          id: "privacy",
           icon: LockKeyhole,
-          label: 'Privacy',
-          action: () => alert('Privacy settings - Connect to backend'),
-          description: 'Control your privacy settings'
+          label: "Privacy",
+          action: () => alert("Privacy settings - Connect to backend"),
+          description: "Control your privacy settings",
         },
         {
-          id: 'security',
+          id: "security",
           icon: ShieldCheck,
-          label: 'Security',
-          action: () => alert('Security settings - Connect to backend'),
-          description: 'Password and authentication'
+          label: "Security",
+          action: () => alert("Security settings - Connect to backend"),
+          description: "Password and authentication",
         },
         {
-          id: 'blocked-users',
+          id: "blocked-users",
           icon: Ban,
-          label: 'Blocked Users',
-          path: '/blocked-users',
-          description: 'Manage blocked contacts',
-          component: BlockedUsers
-        }
-      ]
+          label: "Blocked Users",
+          path: "/blocked-users",
+          description: "Manage blocked contacts",
+          component: BlockedUsers,
+        },
+      ],
     },
     {
-      title: 'Preferences',
+      title: "Preferences",
       items: [
         {
-          id: 'notifications',
+          id: "notifications",
           icon: BellRing,
-          label: 'Notifications',
-          description: 'Manage notification preferences',
+          label: "Notifications",
+          path: "/notification-settings",
+          description: "Manage notification preferences",
           component: NotificationSettings,
-          showComponentInline: true
         },
         {
-          id: 'appearance',
+          id: "appearance",
           icon: Palette,
-          label: 'Appearance',
-          path: '/appearance',
-          description: 'Theme and display options',
-          component: Appearance
+          label: "Appearance",
+          path: "/appearance",
+          description: "Theme and display options",
+          component: Appearance,
         },
         {
-          id: 'language',
+          id: "language",
           icon: Languages,
-          label: 'Language',
-          action: () => alert('Language settings - Connect to backend'),
-          description: 'Change app language'
-        }
-      ]
+          label: "Language",
+          action: () => alert("Language settings - Connect to backend"),
+          description: "Change app language",
+        },
+      ],
     },
     {
-      title: 'Support',
+      title: "Support",
       items: [
         {
-          id: 'help',
+          id: "help",
           icon: LifeBuoy,
-          label: 'Help & Support',
-          action: () => alert('Help & Support - Connect to backend'),
-          description: 'Get help with ConvoHub'
-        }
-      ]
-    }
+          label: "Help & Support",
+          action: () => alert("Help & Support - Connect to backend"),
+          description: "Get help with ConvoHub",
+        },
+      ],
+    },
   ];
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const userId = user.user_id;
-      const token = localStorage.getItem('accessToken');
-      
+    if (window.confirm("Are you sure you want to logout?")) {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || user.user_id;
+      const token = localStorage.getItem("accessToken");
+
       try {
         // Unsubscribe from push notifications
         if (token) {
-          await unsubscribeFromPushNotifications(token)
-            .catch((error) => {
-              console.error('Error unsubscribing from notifications:', error);
-            });
+          await unsubscribeFromPushNotifications(token).catch((error) => {
+            console.error("Error unsubscribing from notifications:", error);
+          });
         }
-        
+
         // Logout from backend
         if (userId) {
-          await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:3001"}/api/auth/logout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId }),
-          });
+          await fetch(
+            `${
+              process.env.REACT_APP_API_URL || "http://localhost:3001"
+            }/api/auth/logout`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId }),
+            }
+          );
         }
       } catch (e) {
         // Optionally handle error
-        console.error('Logout error:', e);
+        console.error("Logout error:", e);
       } finally {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
         // Use replace to prevent going back to protected pages
-        window.location.replace('/login');
+        window.location.replace("/login");
       }
     }
   };
 
   const handleItemClick = (item) => {
-    if (typeof window !== 'undefined' && window.innerWidth < 900) {
+    if (typeof window !== "undefined" && window.innerWidth < 900) {
       // On mobile, navigate to the page
       if (item.path) {
         navigate(item.path);
@@ -174,7 +203,7 @@ const Settings = ({ isEmbedded = false }) => {
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
       const rightEdge = rect.left + leftPanelWidth;
-      
+
       if (Math.abs(e.clientX - rightEdge) < 5) {
         isResizingRef.current = true;
       }
@@ -182,12 +211,15 @@ const Settings = ({ isEmbedded = false }) => {
 
     const handleMouseMove = (e) => {
       if (!isResizingRef.current || !containerRef.current) return;
-      
+
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
       let newWidth = e.clientX - rect.left;
-      
-      newWidth = Math.max(SIDEBAR_CONFIG.MIN_WIDTH, Math.min(newWidth, SIDEBAR_CONFIG.MAX_WIDTH));
+
+      newWidth = Math.max(
+        SIDEBAR_CONFIG.MIN_WIDTH,
+        Math.min(newWidth, SIDEBAR_CONFIG.MAX_WIDTH)
+      );
       setLeftPanelWidth(newWidth);
       // Save to shared storage
       setSidebarWidth(newWidth);
@@ -197,80 +229,93 @@ const Settings = ({ isEmbedded = false }) => {
       isResizingRef.current = false;
     };
 
-    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
-      document.addEventListener('mousedown', handleMouseDown);
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+    if (typeof window !== "undefined" && window.innerWidth >= 900) {
+      document.addEventListener("mousedown", handleMouseDown);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
 
       return () => {
-        document.removeEventListener('mousedown', handleMouseDown);
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener("mousedown", handleMouseDown);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [leftPanelWidth]);
 
   return (
     <div className="settings-page" data-embedded={isEmbedded}>
-      <div 
+      <div
         className="settings-container"
         ref={containerRef}
         style={
-          !isEmbedded && typeof window !== 'undefined' && window.innerWidth >= 900 ? {
-            display: 'grid',
-            gridTemplateColumns: `${leftPanelWidth}px 1fr`
-          } : {}
+          !isEmbedded &&
+          typeof window !== "undefined" &&
+          window.innerWidth >= 900
+            ? {
+                display: "grid",
+                gridTemplateColumns: `${leftPanelWidth}px 1fr`,
+              }
+            : {}
         }
       >
         {/* Left Panel - Settings Menu */}
         <div className="settings-left-panel">
-          <PageHeader
-            title="Settings"
-            backgroundColor="var(--background-color)"
-            onBack={() => navigate('/chats')}
-          />
-
-          <div className="settings-menu">
-            {settingsSections.map((section, index) => (
-              <div key={index} className="settings-section">
-                <h2 className="section-title">{section.title}</h2>
-                <div className="settings-items">
-                  {section.items.map((item, itemIndex) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={itemIndex}
-                        className={`setting-item ${selectedSetting?.id === item.id ? 'selected' : ''}`}
-                        onClick={() => handleItemClick(item)}
-                      >
-                        <div className="setting-icon">
-                          <Icon size={22} />
-                        </div>
-                        <div className="setting-info">
-                          <h3>{item.label}</h3>
-                          <p>{item.description}</p>
-                        </div>
-                        <ChevronRight size={20} className="chevron-icon" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            <div className="settings-section">
-              <button className="logout-btn" onClick={handleLogout}>
-                <LogOut size={22} />
-                <span>Logout</span>
-              </button>
-            </div>
-
-            <div className="app-version">
-              <p>ConvoHub v1.0.0</p>
-            </div>
+          <div ref={headerRef}>
+            <PageHeader
+              title="Settings"
+              backgroundColor="var(--background-color)"
+              onBack={() => navigate("/chats")}
+            />
           </div>
 
-          <BottomTabBar activeTab="settings" />
+          <div className="settings-menu-wrapper">
+            <SimpleBar style={{ maxHeight: settingsMenuHeight }}>
+              <div className="settings-menu">
+                {settingsSections.map((section, index) => (
+                  <div key={index} className="settings-section">
+                    <h2 className="section-title">{section.title}</h2>
+                    <div className="settings-items">
+                      {section.items.map((item, itemIndex) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={itemIndex}
+                            className={`setting-item ${
+                              selectedSetting?.id === item.id ? "selected" : ""
+                            }`}
+                            onClick={() => handleItemClick(item)}
+                          >
+                            <div className="setting-icon">
+                              <Icon size={22} />
+                            </div>
+                            <div className="setting-info">
+                              <h3>{item.label}</h3>
+                              <p>{item.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="settings-section">
+                  <button className="logout-btn" onClick={handleLogout}>
+                    <LogOut size={22} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+
+                <div className="app-version">
+                  <p>ConvoHub v1.0.0</p>
+                </div>
+              </div>
+            </SimpleBar>
+          </div>
+
+          <div ref={bottomTabBarRef}>
+            <BottomTabBar activeTab="settings" />
+          </div>
         </div>
 
         {/* Right Panel - Settings Content */}
@@ -278,14 +323,7 @@ const Settings = ({ isEmbedded = false }) => {
           {selectedSetting ? (
             <>
               {selectedSetting.component ? (
-                selectedSetting.id === 'notifications' ? (
-                  <selectedSetting.component 
-                    userId={userData?.id} 
-                    token={localStorage.getItem('accessToken')}
-                  />
-                ) : (
-                  <selectedSetting.component isEmbedded={true} />
-                )
+                <selectedSetting.component isEmbedded={true} />
               ) : selectedSetting.path ? (
                 <div className="settings-placeholder">
                   <p>Click to navigate to {selectedSetting.label}</p>

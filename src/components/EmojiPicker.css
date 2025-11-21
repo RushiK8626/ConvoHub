@@ -1,0 +1,4 @@
+/* Emoji picker wrapper - colors are set dynamically via inline styles */
+.emoji-picker-wrapper {
+  position: relative;
+}

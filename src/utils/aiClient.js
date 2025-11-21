@@ -3,9 +3,11 @@
  * Handles all AI-related API calls: smart replies, translation, summarization, etc.
  */
 
-import { apiPost } from './apiClient';
+import { apiPost } from "./apiClient";
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
+const API_BASE_URL = (
+  process.env.REACT_APP_API_URL || "http://localhost:3001"
+).replace(/\/+$/, "");
 
 /**
  * Get smart reply suggestions for a chat
@@ -17,11 +19,11 @@ export const getSmartReplies = async (chatId, limit = 3) => {
   try {
     const response = await apiPost(`${API_BASE_URL}/api/ai/smart-replies`, {
       chat_id: chatId,
-      limit: limit
+      limit: limit,
     });
     return response.suggestions || response || [];
   } catch (error) {
-    console.error('Error getting smart replies:', error);
+    console.error("Error getting smart replies:", error);
     throw error;
   }
 };
@@ -36,11 +38,11 @@ export const translateText = async (text, targetLanguage) => {
   try {
     const response = await apiPost(`${API_BASE_URL}/api/ai/translate`, {
       text: text,
-      target_language: targetLanguage
+      target_language: targetLanguage,
     });
     return response;
   } catch (error) {
-    console.error('Error translating text:', error);
+    console.error("Error translating text:", error);
     throw error;
   }
 };
@@ -51,15 +53,15 @@ export const translateText = async (text, targetLanguage) => {
  * @param {string} summaryType - Type of summary ('brief', 'detailed', 'bullet')
  * @returns {Promise<Object>} Summary result with summary text
  */
-export const summarizeChat = async (chatId, summaryType = 'brief') => {
+export const summarizeChat = async (chatId, summaryType = "brief") => {
   try {
     const response = await apiPost(`${API_BASE_URL}/api/ai/summarize`, {
       chat_id: chatId,
-      summary_type: summaryType
+      summary_type: summaryType,
     });
     return response;
   } catch (error) {
-    console.error('Error summarizing chat:', error);
+    console.error("Error summarizing chat:", error);
     throw error;
   }
 };
@@ -72,11 +74,11 @@ export const summarizeChat = async (chatId, summaryType = 'brief') => {
 export const detectLanguage = async (text) => {
   try {
     const response = await apiPost(`${API_BASE_URL}/api/ai/detect-language`, {
-      text: text
+      text: text,
     });
     return response;
   } catch (error) {
-    console.error('Error detecting language:', error);
+    console.error("Error detecting language:", error);
     throw error;
   }
 };
@@ -88,12 +90,15 @@ export const detectLanguage = async (text) => {
  */
 export const getConversationStarters = async (chatId) => {
   try {
-    const response = await apiPost(`${API_BASE_URL}/api/ai/conversation-starters`, {
-      chat_id: chatId
-    });
+    const response = await apiPost(
+      `${API_BASE_URL}/api/ai/conversation-starters`,
+      {
+        chat_id: chatId,
+      }
+    );
     return response;
   } catch (error) {
-    console.error('Error getting conversation starters:', error);
+    console.error("Error getting conversation starters:", error);
     throw error;
   }
 };
@@ -103,5 +108,5 @@ export default {
   translateText,
   summarizeChat,
   detectLanguage,
-  getConversationStarters
+  getConversationStarters,
 };

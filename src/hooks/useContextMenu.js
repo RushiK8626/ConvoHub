@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 /**
  * Custom hook for managing context menu state
@@ -33,7 +33,7 @@ export const useContextMenu = () => {
   const handleThreeDotsClick = useCallback((e, menuWidth = 280, offset = 8) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    
+
     let x = rect.right - menuWidth;
     let y = rect.bottom + offset;
 
@@ -74,10 +74,10 @@ export const useContextMenu = () => {
           });
         }
       }
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener("touchend", handleTouchEnd);
     };
 
-    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener("touchend", handleTouchEnd);
   }, []);
 
   /**
@@ -91,10 +91,13 @@ export const useContextMenu = () => {
    * Close menu and execute callback
    * @param {Function} callback - Function to execute before closing
    */
-  const closeMenuWithCallback = useCallback((callback) => {
-    if (callback) callback();
-    closeMenu();
-  }, [closeMenu]);
+  const closeMenuWithCallback = useCallback(
+    (callback) => {
+      if (callback) callback();
+      closeMenu();
+    },
+    [closeMenu]
+  );
 
   /**
    * Update menu position

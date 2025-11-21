@@ -55,7 +55,8 @@
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -159,7 +160,9 @@ input[type="password"]::-webkit-textfield-decoration-container {
 }
 
 /* Ensure the input wrapper remains positioned so the toggle can overlap reliably */
-.input-wrapper { position: relative; }
+.input-wrapper {
+  position: relative;
+}
 
 .input-field.error {
   border-color: #ff4757;

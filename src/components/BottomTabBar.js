@@ -1,22 +1,20 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, User, Settings, Bell } from 'lucide-react';
-import './BottomTabBar.css';
+import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { MessageCircle, User, Settings, Bell } from "lucide-react";
+import "./BottomTabBar.css";
 
 const BottomTabBar = ({ activeTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const tabs = [
-    { id: 'chats', label: 'Chats', icon: MessageCircle, path: '/chats' },
-    // { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
-    // { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
-    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' }
+    { id: "chats", label: "Chats", icon: MessageCircle, path: "/chats" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
   ];
 
   const handleTabClick = (tab) => {
-    if (tab.id === 'notifications') {
-      alert('Notifications feature - coming soon!');
+    if (tab.id === "notifications") {
+      alert("Notifications feature - coming soon!");
       return;
     }
     navigate(tab.path);
@@ -27,11 +25,11 @@ const BottomTabBar = ({ activeTab }) => {
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id || location.pathname === tab.path;
-        
+
         return (
           <button
             key={tab.id}
-            className={`tab-btn ${isActive ? 'active' : ''}`}
+            className={`tab-btn ${isActive ? "active" : ""}`}
             onClick={() => handleTabClick(tab)}
           >
             <Icon size={24} />

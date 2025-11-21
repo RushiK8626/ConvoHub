@@ -1,21 +1,42 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle, X, Search, Plus, MoreVertical, Check, Pin, Trash2, LogOut, CircleCheckBig, BellOff, Archive, BookMarkedIcon } from 'lucide-react';
-import BottomTabBar from '../components/BottomTabBar';
-import ChatInfoModal from '../components/ChatInfoModal';
-import ChatOptionsMenu from '../components/ChatOptionsMenu';
-import CreateGroupModal from '../components/CreateGroupModal';
-import ContextMenu from '../components/ContextMenu';
-import ConfirmationBox from '../components/ConfirmationBox';
-import ToastContainer from '../components/ToastContainer';
-import { NotificationCenter } from '../components/NotificationCenter';
-import useContextMenu from '../hooks/useContextMenu';
-import { useToast } from '../hooks/useToast';
-import ChatWindow from './ChatWindow';
-import { formatChatPreviewTime } from '../utils/dateUtils';
-import socketService from '../utils/socket';
-import { getSidebarWidth, setSidebarWidth, SIDEBAR_CONFIG } from '../utils/sidebarWidth';
-import './ChatHome.css';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  MessageCircle,
+  X,
+  Search,
+  Plus,
+  MoreVertical,
+  Check,
+  Pin,
+  Trash2,
+  LogOut,
+  CircleCheckBig,
+  BellOff,
+  Archive,
+  BookMarkedIcon,
+} from "lucide-react";
+import { Scrollbar } from "react-scrollbars-custom";
+import SimpleBar from "simplebar-react";
+import "simplebar-react/dist/simplebar.min.css";
+import BottomTabBar from "../components/BottomTabBar";
+import ChatInfoModal from "../components/ChatInfoModal";
+import ChatOptionsMenu from "../components/ChatOptionsMenu";
+import CreateGroupModal from "../components/CreateGroupModal";
+import ContextMenu from "../components/ContextMenu";
+import ConfirmationBox from "../components/ConfirmationBox";
+import ToastContainer from "../components/ToastContainer";
+import { NotificationCenter } from "../components/NotificationCenter";
+import useContextMenu from "../hooks/useContextMenu";
+import { useToast } from "../hooks/useToast";
+import ChatWindow from "./ChatWindow";
+import { formatChatPreviewTime } from "../utils/dateUtils";
+import socketService from "../utils/socket";
+import {
+  getSidebarWidth,
+  setSidebarWidth,
+  SIDEBAR_CONFIG,
+} from "../utils/sidebarWidth";
+import "./ChatHome.css";
 
 const ChatHome = () => {
   const navigate = useNavigate();
@@ -23,18 +44,20 @@ const ChatHome = () => {
   const { toasts, showToast, removeToast } = useToast();
 
   const [greeting, setGreeting] = useState("");
-  
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Get userId from navigation state if present, or from localStorage user
-  const userId = location.state?.userId || JSON.parse(localStorage.getItem('user') || '{}').user_id;
+  const userId =
+    location.state?.userId ||
+    JSON.parse(localStorage.getItem("user") || "{}").user_id;
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [userProfiles, setUserProfiles] = useState({});
   const [chatImages, setChatImages] = useState({}); // Store blob URLs for chat images
   const [showNewChatModal, setShowNewChatModal] = useState(false);
-  const [searchUsers, setSearchUsers] = useState('');
+  const [searchUsers, setSearchUsers] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedUserForNewChat, setSelectedUserForNewChat] = useState(null);
@@ -48,7 +71,9 @@ const ChatHome = () => {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [selectedChats, setSelectedChats] = useState({});
   const [chatSelection, setChatSelection] = useState(false);
-  const [selectedChatId, setSelectedChatId] = useState(() => location.state?.selectedChatId || null);
+  const [selectedChatId, setSelectedChatId] = useState(
+    () => location.state?.selectedChatId || null
+  );
   const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
     // Get saved width from shared storage or use default
     return getSidebarWidth();
@@ -56,17 +81,38 @@ const ChatHome = () => {
   // const [Members, setMembers] = useState(null);
   const containerRef = useRef(null);
   const isResizingRef = useRef(false);
-  
+  const headerRef = useRef(null);
+  const bottomTabBarRef = useRef(null);
+  const [chatListHeight, setChatListHeight] = useState("calc(100vh - 200px)");
+
   // Context menu for chats
   const chatContextMenu = useContextMenu();
   const [selectedChatForMenu, setSelectedChatForMenu] = useState(null);
 
+  // Calculate chat list height dynamically
+  useEffect(() => {
+    const calculateHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const bottomTabHeight = bottomTabBarRef.current?.offsetHeight || 0;
+      const totalOffset = headerHeight + bottomTabHeight + 20; // 20px for padding/margin
+      setChatListHeight(`calc(100vh - ${totalOffset}px)`);
+    };
+
+    calculateHeight();
+    window.addEventListener("resize", calculateHeight);
+    return () => window.removeEventListener("resize", calculateHeight);
+  }, [chatSelection, showNewChatModal]);
+
   // Helper function to sort chats by last message timestamp (newest first)
   const sortChatsByTimestamp = (chatsToSort) => {
     return [...chatsToSort].sort((a, b) => {
-      if(a.pinned == b.pinned) {
-        const timeA = new Date(a.last_message_timestamp || a.created_at || 0).getTime();
-        const timeB = new Date(b.last_message_timestamp || b.created_at || 0).getTime();
+      if (a.pinned == b.pinned) {
+        const timeA = new Date(
+          a.last_message_timestamp || a.created_at || 0
+        ).getTime();
+        const timeB = new Date(
+          b.last_message_timestamp || b.created_at || 0
+        ).getTime();
         return timeB - timeA; // Descending order (newest first)
       }
       return a.pinned ? -1 : 1;
@@ -77,32 +123,32 @@ const ChatHome = () => {
   const fetchUserProfile = async (otherUserId) => {
     if (userProfiles[otherUserId] || otherUserId === userId) return;
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
       const res = await fetch(`${API_URL}/api/users/public/id/${otherUserId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
       if (res.ok) {
         const data = await res.json();
         const userData = data.user;
-        
+
         // Convert profile_pic to full URL if it exists
         if (userData.profile_pic) {
           // Extract filename from path like /uploads/25002-xxx.jpg
-          const filename = userData.profile_pic.split('/uploads/').pop();
+          const filename = userData.profile_pic.split("/uploads/").pop();
           userData.profile_pic = `${API_URL}/uploads/profiles/${filename}`;
         }
-        
-        setUserProfiles(prev => ({
+
+        setUserProfiles((prev) => ({
           ...prev,
-          [otherUserId]: userData
+          [otherUserId]: userData,
         }));
       }
     } catch (err) {
-      console.error('Error fetching user profile:', err);
+      console.error("Error fetching user profile:", err);
     }
   };
 
@@ -110,92 +156,99 @@ const ChatHome = () => {
   const fetchChatImage = async (chatId, imagePath) => {
     if (chatImages[chatId] || !imagePath) return;
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      const filename = imagePath.split('/uploads/').pop();
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
+      const filename = imagePath.split("/uploads/").pop();
       const res = await fetch(`${API_URL}/uploads/chat-images/${filename}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (res.ok) {
         const blob = await res.blob();
         const blobUrl = URL.createObjectURL(blob);
-        setChatImages(prev => ({
+        setChatImages((prev) => ({
           ...prev,
-          [chatId]: blobUrl
+          [chatId]: blobUrl,
         }));
       }
     } catch (err) {
-      console.error('Error fetching chat image:', err);
+      console.error("Error fetching chat image:", err);
     }
   };
 
   useEffect(() => {
     const fetchChats = async (retry = false) => {
       if (!userId) {
-        setError('User ID not found.');
+        setError("User ID not found.");
         setLoading(false);
         return;
       }
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(`${API_URL}/api/chat-visibility/active/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(
+          `${API_URL}/api/chat-visibility/active/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
         if (res.status === 401 && !retry) {
           // Try to refresh token
-          const refreshToken = localStorage.getItem('refreshToken');
+          const refreshToken = localStorage.getItem("refreshToken");
           if (!refreshToken) {
-            setError('Session expired. Please log in again.');
+            setError("Session expired. Please log in again.");
             setLoading(false);
-            console.log('No refresh token found');
+            console.err("No refresh token found");
             return;
           }
           try {
-            const refreshRes = await fetch(`${API_URL}/api/auth/refresh-token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken: String(refreshToken) }),
-            });
+            const refreshRes = await fetch(
+              `${API_URL}/api/auth/refresh-token`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: String(refreshToken) }),
+              }
+            );
             if (!refreshRes.ok) {
-              setError('Session expired. Please log in again.');
+              setError("Session expired. Please log in again.");
               setLoading(false);
               return;
             }
             const refreshData = await refreshRes.json();
-            localStorage.setItem('accessToken', refreshData.accessToken);
+            localStorage.setItem("accessToken", refreshData.accessToken);
             // Retry fetching chats with new token
             await fetchChats(true);
             return;
           } catch (refreshErr) {
-            setError('Session expired. Please log in again.');
+            setError("Session expired. Please log in again.");
             setLoading(false);
             return;
           }
         }
         if (!res.ok) {
-          throw new Error('Failed to fetch chats');
+          throw new Error("Failed to fetch chats");
         }
         const data = await res.json();
-        
+
         // Sort chats by last_message_timestamp (newest first)
         const sortedChats = sortChatsByTimestamp(data.chats || []);
-        console.log(sortedChats);
         // Don't process chat images here, just set the chats with original paths
         setChats(sortedChats);
 
-        setSelectedChats(prev => ({
+        setSelectedChats((prev) => ({
           ...prev,
-          ...Object.fromEntries(sortedChats.map(item => [item.chat_id, false]))
+          ...Object.fromEntries(
+            sortedChats.map((item) => [item.chat_id, false])
+          ),
         }));
-
       } catch (err) {
-        setError(err.message || 'Error fetching chats');
+        setError(err.message || "Error fetching chats");
       } finally {
         setLoading(false);
       }
@@ -205,13 +258,13 @@ const ChatHome = () => {
 
   // Fetch user profiles for private chats
   useEffect(() => {
-    chats.forEach(chat => {
-      if (chat.chat_type === 'private' && Array.isArray(chat.members)) {
-        const other = chat.members.find(m => m.user_id !== userId);
+    chats.forEach((chat) => {
+      if (chat.chat_type === "private" && Array.isArray(chat.members)) {
+        const other = chat.members.find((m) => m.user_id !== userId);
         if (other && other.user_id) {
           fetchUserProfile(other.user_id);
         }
-      } else if (chat.chat_type === 'group' && chat.chat_image) {
+      } else if (chat.chat_type === "group" && chat.chat_image) {
         // Fetch group chat image with token
         fetchChatImage(chat.chat_id, chat.chat_image);
       }
@@ -219,9 +272,8 @@ const ChatHome = () => {
     // eslint-disable-next-line
   }, [chats]);
 
-
-  const filteredChats = chats.filter(chat =>
-    (chat.chat_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChats = chats.filter((chat) =>
+    (chat.chat_name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Close options menu when clicking outside
@@ -229,21 +281,21 @@ const ChatHome = () => {
     if (!showOptionsMenu) return;
 
     const handleClickOutside = (e) => {
-      const menu = document.querySelector('.chat-options-menu');
-      const btn = document.querySelector('.new-chat-btn');
+      const menu = document.querySelector(".chat-options-menu");
+      const btn = document.querySelector(".new-chat-btn");
       if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
         setShowOptionsMenu(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [showOptionsMenu]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
-      Object.values(chatImages).forEach(blobUrl => {
+      Object.values(chatImages).forEach((blobUrl) => {
         if (blobUrl) URL.revokeObjectURL(blobUrl);
       });
     };
@@ -258,37 +310,46 @@ const ChatHome = () => {
 
     // Listen for new messages to update chat previews
     const handleNewMessage = (message) => {
-      // console.log('📨 New message received:', message);
-      
       // Update chats locally - move chat with new message to top and update last message
-      setChats(prevChats => {
+      setChats((prevChats) => {
         // Find the chat this message belongs to
-        const chatIndex = prevChats.findIndex(chat => chat.chat_id === message.chat_id);
-        
+        const chatIndex = prevChats.findIndex(
+          (chat) => chat.chat_id === message.chat_id
+        );
+
         if (chatIndex === -1) {
           // Chat not found - create a new chat entry from message payload
-          console.log('📦 New chat received via message, adding to list:', message.chat_id);
-          
+
           // Build new chat from message data
           const newChat = {
             chat_id: message.chat_id,
             chat_name: message.chat?.chat_name || null,
-            chat_type: message.chat?.chat_type || 'private',
+            chat_type: message.chat?.chat_type || "private",
             chat_image: message.chat?.chat_image || null,
-            members: message.chat?.members || (message.chat?.chat_type === 'private' ? [{ user_id: message.sender_id, user: message.sender }] : []),
+            members:
+              message.chat?.members ||
+              (message.chat?.chat_type === "private"
+                ? [{ user_id: message.sender_id, user: message.sender }]
+                : []),
             last_message: {
               message_id: message.message_id,
-              preview_text: message.message_text || (message.attachments?.length ? '[Attachment]' : 'Empty message'),
+              preview_text:
+                message.message_text ||
+                (message.attachments?.length
+                  ? "[Attachment]"
+                  : "Empty message"),
               sender: message.sender,
-              has_attachment: !!(message.attachments && message.attachments.length),
-              created_at: message.created_at
+              has_attachment: !!(
+                message.attachments && message.attachments.length
+              ),
+              created_at: message.created_at,
             },
             last_message_timestamp: message.created_at,
             sender_id: message.sender_id,
             created_at: message.created_at,
-            unread_count: (message.sender_id !== userId) ? 1 : 0
+            unread_count: message.sender_id !== userId ? 1 : 0,
           };
-          
+
           // Add new chat to the beginning (it's the newest)
           const sortedChats = sortChatsByTimestamp([newChat, ...prevChats]);
           return sortedChats;
@@ -296,7 +357,10 @@ const ChatHome = () => {
 
         // Increment unread count if message is not from current user and not currently selected
         let unreadCount = prevChats[chatIndex].unread_count || 0;
-        if (message.sender_id !== userId && selectedChatId !== message.chat_id) {
+        if (
+          message.sender_id !== userId &&
+          selectedChatId !== message.chat_id
+        ) {
           unreadCount += 1;
         }
 
@@ -305,21 +369,30 @@ const ChatHome = () => {
           ...prevChats[chatIndex],
           last_message: {
             message_id: message.message_id,
-            preview_text: message.message_text || (message.attachments?.length ? '[Attachment]' : 'Empty message'),
+            preview_text:
+              message.message_text ||
+              (message.attachments?.length ? "[Attachment]" : "Empty message"),
             sender: message.sender,
-            has_attachment: !!(message.attachments && message.attachments.length),
-            created_at: message.created_at
+            has_attachment: !!(
+              message.attachments && message.attachments.length
+            ),
+            created_at: message.created_at,
           },
           last_message_timestamp: message.created_at,
           sender_id: message.sender_id,
-          unread_count: unreadCount
+          unread_count: unreadCount,
         };
 
         // Remove the chat from its current position
-        const chatsWithoutCurrent = prevChats.filter((_, index) => index !== chatIndex);
+        const chatsWithoutCurrent = prevChats.filter(
+          (_, index) => index !== chatIndex
+        );
 
         // Sort all chats by last_message_timestamp (newest first)
-        const sortedChats = sortChatsByTimestamp([updatedChat, ...chatsWithoutCurrent]);
+        const sortedChats = sortChatsByTimestamp([
+          updatedChat,
+          ...chatsWithoutCurrent,
+        ]);
 
         return sortedChats;
       });
@@ -327,17 +400,16 @@ const ChatHome = () => {
 
     // Listen for user online/offline status to update chat list
     const handleUserOnline = ({ user_id }) => {
-      // console.log(`🟢 User ${user_id} online - updating chats`);
-      setChats(prevChats => 
-        prevChats.map(chat => {
-          if (chat.chat_type === 'private' && chat.members) {
-            const other = chat.members.find(m => m.user_id !== userId);
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.chat_type === "private" && chat.members) {
+            const other = chat.members.find((m) => m.user_id !== userId);
             if (other && other.user_id === user_id) {
               return {
                 ...chat,
-                members: chat.members.map(m => 
+                members: chat.members.map((m) =>
                   m.user_id === user_id ? { ...m, is_online: true } : m
-                )
+                ),
               };
             }
           }
@@ -347,17 +419,18 @@ const ChatHome = () => {
     };
 
     const handleUserOffline = ({ user_id, lastSeen }) => {
-      // console.log(`🔴 User ${user_id} offline - updating chats`);
-      setChats(prevChats => 
-        prevChats.map(chat => {
-          if (chat.chat_type === 'private' && chat.members) {
-            const other = chat.members.find(m => m.user_id !== userId);
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.chat_type === "private" && chat.members) {
+            const other = chat.members.find((m) => m.user_id !== userId);
             if (other && other.user_id === user_id) {
               return {
                 ...chat,
-                members: chat.members.map(m => 
-                  m.user_id === user_id ? { ...m, is_online: false, last_seen: lastSeen } : m
-                )
+                members: chat.members.map((m) =>
+                  m.user_id === user_id
+                    ? { ...m, is_online: false, last_seen: lastSeen }
+                    : m
+                ),
               };
             }
           }
@@ -367,30 +440,33 @@ const ChatHome = () => {
     };
 
     // Handle being added to a group
-    const handleAddedToGroup = ({ chat_id, group_name, chat_image, message }) => {
-      console.log(`✅ Added to group:`, { chat_id, group_name, chat_image, message });
-      
+    const handleAddedToGroup = ({
+      chat_id,
+      group_name,
+      chat_image,
+      message,
+    }) => {
       // Create new group chat object
       const newGroupChat = {
         chat_id,
         chat_name: group_name,
-        chat_type: 'group',
+        chat_type: "group",
         chat_image: chat_image || null,
         members: [], // Will be fetched on demand
         last_message: {
           message_id: null,
           preview_text: message,
-          sender: 'System',
+          sender: "System",
           has_attachment: false,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         },
         last_message_timestamp: new Date().toISOString(),
         created_at: new Date().toISOString(),
-        unread_count: 0
+        unread_count: 0,
       };
 
       // Add to top of chats list
-      setChats(prevChats => [newGroupChat, ...prevChats]);
+      setChats((prevChats) => [newGroupChat, ...prevChats]);
 
       // Fetch group image if available
       if (chat_image) {
@@ -398,15 +474,13 @@ const ChatHome = () => {
       }
 
       // Show toast notification
-      showToast(`Added to group "${group_name}"`, 'success');
+      showToast(`Added to group "${group_name}"`, "success");
     };
 
     // Handle being removed from a group
     const handleRemovedFromGroup = ({ chat_id, group_name, message }) => {
-      console.log(`❌ Removed from group:`, { chat_id, group_name, message });
-      
       // Remove the group chat from the list
-      setChats(prevChats => prevChats.filter(c => c.chat_id !== chat_id));
+      setChats((prevChats) => prevChats.filter((c) => c.chat_id !== chat_id));
 
       // If the removed chat was selected, deselect it
       if (selectedChatId === chat_id) {
@@ -414,7 +488,7 @@ const ChatHome = () => {
       }
 
       // Show toast notification
-      showToast(message, 'warning');
+      showToast(message, "warning");
     };
 
     socketService.onNewMessage(handleNewMessage);
@@ -426,11 +500,11 @@ const ChatHome = () => {
     return () => {
       const socket = socketService.getSocket();
       if (socket) {
-        socket.off('new_message', handleNewMessage);
-        socket.off('user_online', handleUserOnline);
-        socket.off('user_offline', handleUserOffline);
-        socket.off('you_were_added_to_group', handleAddedToGroup);
-        socket.off('you_were_removed_from_group', handleRemovedFromGroup);
+        socket.off("new_message", handleNewMessage);
+        socket.off("user_online", handleUserOnline);
+        socket.off("user_offline", handleUserOffline);
+        socket.off("you_were_added_to_group", handleAddedToGroup);
+        socket.off("you_were_removed_from_group", handleRemovedFromGroup);
       }
     };
   }, [userId, selectedChatId, showToast, fetchChatImage]);
@@ -466,21 +540,25 @@ const ChatHome = () => {
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
       const rightEdge = rect.left + leftPanelWidth;
-      
-      if (Math.abs(e.clientX - rightEdge) < 5) { // 5px tolerance for click area
+
+      if (Math.abs(e.clientX - rightEdge) < 5) {
+        // 5px tolerance for click area
         isResizingRef.current = true;
       }
     };
 
     const handleMouseMove = (e) => {
       if (!isResizingRef.current || !containerRef.current) return;
-      
+
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
       let newWidth = e.clientX - rect.left;
-      
+
       // Min width: 320px, Max width: 650px
-      newWidth = Math.max(SIDEBAR_CONFIG.MIN_WIDTH, Math.min(newWidth, SIDEBAR_CONFIG.MAX_WIDTH));
+      newWidth = Math.max(
+        SIDEBAR_CONFIG.MIN_WIDTH,
+        Math.min(newWidth, SIDEBAR_CONFIG.MAX_WIDTH)
+      );
       setLeftPanelWidth(newWidth);
       // Save to shared storage
       setSidebarWidth(newWidth);
@@ -490,22 +568,22 @@ const ChatHome = () => {
       isResizingRef.current = false;
     };
 
-    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
-      document.addEventListener('mousedown', handleMouseDown);
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+    if (typeof window !== "undefined" && window.innerWidth >= 900) {
+      document.addEventListener("mousedown", handleMouseDown);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
 
       return () => {
-        document.removeEventListener('mousedown', handleMouseDown);
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener("mousedown", handleMouseDown);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [leftPanelWidth]);
 
   const handleChatClick = (chatId) => {
     // On small screens, navigate to chat page. On wide screens, open inline.
-    if (typeof window !== 'undefined' && window.innerWidth < 900) {
+    if (typeof window !== "undefined" && window.innerWidth < 900) {
       navigate(`/chat/${chatId}`);
     } else {
       setSelectedChatId(chatId);
@@ -514,9 +592,9 @@ const ChatHome = () => {
 
   // Keep selectedChatId in sync with URL when user navigates directly (on mobile or deep link)
   useEffect(() => {
-    const path = location.pathname || '';
+    const path = location.pathname || "";
     const match = path.match(/\/chat\/(\d+)/);
-    if (match && typeof window !== 'undefined' && window.innerWidth < 900) {
+    if (match && typeof window !== "undefined" && window.innerWidth < 900) {
       // Only sync on small screens - otherwise just set from URL
       setSelectedChatId(match[1]);
     }
@@ -524,10 +602,10 @@ const ChatHome = () => {
 
   // Send greeting message when new chat is loaded
   useEffect(() => {
-    const greetingChatId = sessionStorage.getItem('sendGreetingOnChatLoad');
+    const greetingChatId = sessionStorage.getItem("sendGreetingOnChatLoad");
     if (greetingChatId && selectedChatId === Number(greetingChatId)) {
       // Clear the flag
-      sessionStorage.removeItem('sendGreetingOnChatLoad');
+      sessionStorage.removeItem("sendGreetingOnChatLoad");
       // Send greeting with a small delay to ensure chat window is fully loaded
       const timer = setTimeout(() => {
         handleSendGreeting(selectedChatId, userId);
@@ -538,22 +616,22 @@ const ChatHome = () => {
 
   const handleChatAvatarClick = (e, chat) => {
     e.stopPropagation(); // Prevent navigation to chat
-    
-    if (chat.chat_type === 'group') {
+
+    if (chat.chat_type === "group") {
       setSelectedChatInfo({
         chatId: chat.chat_id,
-        chatType: 'group',
-        otherUserId: null
+        chatType: "group",
+        otherUserId: null,
       });
-    } else if (chat.chat_type === 'private') {
-      const other = chat.members.find(m => m.user_id !== userId);
+    } else if (chat.chat_type === "private") {
+      const other = chat.members.find((m) => m.user_id !== userId);
       setSelectedChatInfo({
         chatId: chat.chat_id,
-        chatType: 'private',
-        otherUserId: other?.user_id
+        chatType: "private",
+        otherUserId: other?.user_id,
       });
     }
-    
+
     setShowChatInfoModal(true);
   };
 
@@ -564,7 +642,7 @@ const ChatHome = () => {
   const handleNewChatWithUser = () => {
     setShowOptionsMenu(false);
     setShowNewChatModal(true);
-    setSearchUsers('');
+    setSearchUsers("");
     setSearchResults([]);
   };
 
@@ -584,43 +662,42 @@ const ChatHome = () => {
   const handleChatsSelection = (chat_id) => {
     if (!selectedChatForMenu && !chat_id) return;
     const id = chat_id || selectedChatForMenu.chat_id;
-    
+
     setSelectedChats((prevItems) => {
       const newSelectedChats = {
         ...prevItems,
-        [id]: !prevItems[id]
+        [id]: !prevItems[id],
       };
-      
+
       // Calculate the actual count of selected items
-      const selectedCount = Object.values(newSelectedChats).filter(Boolean).length;
-      
+      const selectedCount =
+        Object.values(newSelectedChats).filter(Boolean).length;
+
       // Update chatSelection based on count
       setChatSelection(selectedCount > 0);
-      
-      console.log('Selected chats:', selectedCount, newSelectedChats);
-      
+
       return newSelectedChats;
     });
-  }
+  };
 
   // Mark chat as read
   const handleMarkAsRead = async (selectedChatId) => {
     if (!selectedChatForMenu && !selectedChatId) return;
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.user_id;
 
       const chatId = selectedChatId || selectedChatForMenu.chat_id;
-      
+
       const res = await fetch(
         `${API_URL}/api/messages/chat/${chatId}/read-all/${userId}`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -628,20 +705,20 @@ const ChatHome = () => {
       if (res.ok) {
         const data = await res.json();
         // Update local state
-        setChats(prevChats => 
-          prevChats.map(c => 
-            c.chat_id === selectedChatForMenu.chat_id 
+        setChats((prevChats) =>
+          prevChats.map((c) =>
+            c.chat_id === selectedChatForMenu.chat_id
               ? { ...c, unread_count: 0 }
               : c
           )
         );
-        showToast(`Marked ${data.count || 'all'} messages as read`, 'success');
+        showToast(`Marked ${data.count || "all"} messages as read`, "success");
       } else {
-        showToast('Failed to mark messages as read', 'error');
+        showToast("Failed to mark messages as read", "error");
       }
     } catch (err) {
-      console.error('Error marking chat as read:', err);
-      showToast('Failed to mark messages as read', 'error');
+      console.error("Error marking chat as read:", err);
+      showToast("Failed to mark messages as read", "error");
     }
   };
 
@@ -649,43 +726,39 @@ const ChatHome = () => {
   const handlePinChat = async () => {
     if (!selectedChatForMenu) return;
     try {
-      const isPinned = selectedChatForMenu.pinned || selectedChatForMenu.is_pinned;
-      const action = isPinned ? 'unpin' : 'pin';
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
+      const isPinned =
+        selectedChatForMenu.pinned || selectedChatForMenu.is_pinned;
+      const action = isPinned ? "unpin" : "pin";
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
       const fullUrl = `${API_URL}/api/chat-visibility/${selectedChatForMenu.chat_id}/${action}`;
-      
-      const res = await fetch(fullUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      console.log(`Response status: ${res.status}`, {
-        ok: res.ok,
-        statusText: res.statusText
+      const res = await fetch(fullUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (res.ok) {
         // Update local state
-        const updated = chats.map(chat => 
+        const updated = chats.map((chat) =>
           chat.chat_id === selectedChatForMenu.chat_id
-          ? { ...chat, pinned: !isPinned, is_pinned: !isPinned }
-          : chat
-        )
+            ? { ...chat, pinned: !isPinned, is_pinned: !isPinned }
+            : chat
+        );
 
         setChats(sortChatsByTimestamp(updated));
-        showToast(isPinned ? 'Chat unpinned' : 'Chat pinned', 'success');
+        showToast(isPinned ? "Chat unpinned" : "Chat pinned", "success");
       } else {
         const errorText = await res.text();
-        console.error('Backend error response:', errorText);
-        showToast(`Failed to update pin status (${res.status})`, 'error');
+        console.error("Backend error response:", errorText);
+        showToast(`Failed to update pin status (${res.status})`, "error");
       }
     } catch (err) {
-      console.error('Error pinning chat:', err);
-      showToast('Error updating pin status', 'error');
+      console.error("Error pinning chat:", err);
+      showToast("Error updating pin status", "error");
     }
   };
 
@@ -694,72 +767,79 @@ const ChatHome = () => {
     if (!selectedChatForMenu && !selectedChatId) return;
 
     const chatId = selectedChatId || selectedChatForMenu.chat_id;
-    
+
     // Confirm deletion
-    const confirmed = window.confirm(`Are you sure you want to delete this chat?`);
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this chat?`
+    );
     if (!confirmed) return;
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
+
       const res = await fetch(`${API_URL}/api/chat-visibility/${chatId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (res.ok) {
         // Remove chat from local state
-        setChats(prevChats => 
-          prevChats.filter(c => c.chat_id !== selectedChatForMenu.chat_id)
+        setChats((prevChats) =>
+          prevChats.filter((c) => c.chat_id !== selectedChatForMenu.chat_id)
         );
-        
+
         // If the deleted chat was selected, deselect it
         if (selectedChatId === selectedChatForMenu.chat_id) {
           setSelectedChatId(null);
         }
       }
     } catch (err) {
-      console.error('Error deleting chat:', err);
+      console.error("Error deleting chat:", err);
     }
   };
 
   // Exit group chat
   const handleExitGroupChat = async () => {
     if (!selectedChatForMenu) return;
-    
+
     // Confirm exit
-    const confirmed = window.confirm('Are you sure you want to exit this group?');
+    const confirmed = window.confirm(
+      "Are you sure you want to exit this group?"
+    );
     if (!confirmed) return;
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      
-      const res = await fetch(`${API_URL}/api/chats/${selectedChatForMenu.chat_id}/exit`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
+
+      const res = await fetch(
+        `${API_URL}/api/chats/${selectedChatForMenu.chat_id}/exit`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (res.ok) {
         // Remove chat from local state
-        setChats(prevChats => 
-          prevChats.filter(c => c.chat_id !== selectedChatForMenu.chat_id)
+        setChats((prevChats) =>
+          prevChats.filter((c) => c.chat_id !== selectedChatForMenu.chat_id)
         );
-        
+
         // If the exited chat was selected, deselect it
         if (selectedChatId === selectedChatForMenu.chat_id) {
           setSelectedChatId(null);
         }
       }
     } catch (err) {
-      console.error('Error exiting group chat:', err);
+      console.error("Error exiting group chat:", err);
     }
   };
 
@@ -767,41 +847,41 @@ const ChatHome = () => {
   const getContextMenuItems = (chat) => {
     const items = [
       {
-        id: 'select',
-        label: 'Select',
+        id: "select",
+        label: "Select",
         icon: <Check size={16} />,
         onClick: handleChatsSelection,
       },
       {
-        id: 'mark-read',
-        label: 'Mark as Read',
+        id: "mark-read",
+        label: "Mark as Read",
         icon: <Check size={16} />,
         onClick: handleMarkAsRead,
       },
       {
-        id: 'pin',
-        label: (chat?.is_pinned || chat?.pinned) ? 'Unpin' : 'Pin',
+        id: "pin",
+        label: chat?.is_pinned || chat?.pinned ? "Unpin" : "Pin",
         icon: <Pin size={16} />,
         onClick: handlePinChat,
       },
-      { id: 'divider1', divider: true },
+      { id: "divider1", divider: true },
     ];
 
     // Different items for private vs group chats
-    if (chat?.chat_type === 'private') {
+    if (chat?.chat_type === "private") {
       items.push({
-        id: 'delete',
-        label: 'Delete',
+        id: "delete",
+        label: "Delete",
         icon: <Trash2 size={16} />,
-        color: 'danger',
+        color: "danger",
         onClick: handleDeleteChat,
       });
-    } else if (chat?.chat_type === 'group') {
+    } else if (chat?.chat_type === "group") {
       items.push({
-        id: 'exit',
-        label: 'Exit Group',
+        id: "exit",
+        label: "Exit Group",
         icon: <LogOut size={16} />,
-        color: 'danger',
+        color: "danger",
         onClick: handleExitGroupChat,
       });
     }
@@ -816,34 +896,34 @@ const ChatHome = () => {
 
     // Fetch the newly created group chat details to add to the list
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const token = localStorage.getItem("accessToken");
+
       const res = await fetch(`${API_URL}/api/chats/${newChatId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         const newChat = data.chat;
-        
+
         // Add the new group chat to the beginning of the chats list
-        setChats(prevChats => [newChat, ...prevChats]);
-        
+        setChats((prevChats) => [newChat, ...prevChats]);
+
         // Fetch group image if available
         if (newChat.chat_image) {
           fetchChatImage(newChat.chat_id, newChat.chat_image);
         }
       }
     } catch (err) {
-      console.error('Error fetching newly created group:', err);
+      console.error("Error fetching newly created group:", err);
     }
-    
+
     // On wide screens (desktop), open in split layout. On mobile, navigate to new page
-    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
+    if (typeof window !== "undefined" && window.innerWidth >= 900) {
       setSelectedChatId(newChatId);
     } else {
       // Navigate to the new group chat on mobile
@@ -852,42 +932,51 @@ const ChatHome = () => {
   };
 
   // Debounced search function
-  const searchUsersAPI = useCallback(async (query) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_URL}/api/users/public/search?query=${encodeURIComponent(query)}&page=1&limit=10`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Process profile pics and filter out current user
-        const usersWithPics = (data.users || [])
-          .filter(user => Number(user.user_id) !== Number(userId)) // Exclude current user
-          .map(user => {
-            if (user.profile_pic) {
-              const filename = user.profile_pic.split('/uploads/').pop();
-              user.profile_pic = `${API_URL}/uploads/profiles/${filename}`;
-            }
-            return user;
-          });
-        setSearchResults(usersWithPics);
+  const searchUsersAPI = useCallback(
+    async (query) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        setSearchLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Error searching users:', err);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [userId]);
+
+      try {
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(
+          `${API_URL}/api/users/public/search?query=${encodeURIComponent(
+            query
+          )}&page=1&limit=10`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          // Process profile pics and filter out current user
+          const usersWithPics = (data.users || [])
+            .filter((user) => Number(user.user_id) !== Number(userId)) // Exclude current user
+            .map((user) => {
+              if (user.profile_pic) {
+                const filename = user.profile_pic.split("/uploads/").pop();
+                user.profile_pic = `${API_URL}/uploads/profiles/${filename}`;
+              }
+              return user;
+            });
+          setSearchResults(usersWithPics);
+        }
+      } catch (err) {
+        console.error("Error searching users:", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [userId]
+  );
 
   // Debounce effect for search
   useEffect(() => {
@@ -920,7 +1009,6 @@ const ChatHome = () => {
 
   // Show confirmation before creating new private chat
   const handleSelectUserClick = (selectedUser) => {
-    // console.log('Selected user for new chat:', selectedUser);
     setSelectedUserForNewChat(selectedUser);
     setShowNewChatConfirmation(true);
   };
@@ -928,70 +1016,70 @@ const ChatHome = () => {
   // Actual create private chat function
   const handleSelectUser = async () => {
     if (!selectedUserForNewChat) return;
-    
+
     try {
       setIsCreatingChat(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      let token = localStorage.getItem('accessToken');
-      
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      let token = localStorage.getItem("accessToken");
+
       // Ensure we have the correct user IDs
       const currentUserId = Number(userId);
       const otherUserId = Number(selectedUserForNewChat.user_id);
-      
-      // Debug log to verify user IDs
-      // console.log('Creating private chat with:', { currentUserId, otherUserId, selectedUserForNewChat });
-      
+
       // Create a new private chat
       let createChatRes = await fetch(`${API_URL}/api/chats/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          chat_type: 'private',
-          member_ids: [currentUserId, otherUserId]
-        })
+          chat_type: "private",
+          member_ids: [currentUserId, otherUserId],
+        }),
       });
 
       // If unauthorized, try to refresh token
       if (createChatRes.status === 401) {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = localStorage.getItem("refreshToken");
         if (refreshToken) {
           try {
-            const refreshRes = await fetch(`${API_URL}/api/auth/refresh-token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken: String(refreshToken) }),
-            });
+            const refreshRes = await fetch(
+              `${API_URL}/api/auth/refresh-token`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: String(refreshToken) }),
+              }
+            );
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json();
-              localStorage.setItem('accessToken', refreshData.accessToken);
+              localStorage.setItem("accessToken", refreshData.accessToken);
               token = refreshData.accessToken;
-              
+
               // Retry creating chat with new token
               createChatRes = await fetch(`${API_URL}/api/chats/`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  chat_type: 'private',
-                  member_ids: [currentUserId, otherUserId]
-                })
+                  chat_type: "private",
+                  member_ids: [currentUserId, otherUserId],
+                }),
               });
             }
           } catch (refreshErr) {
-            console.error('Token refresh failed:', refreshErr);
+            console.error("Token refresh failed:", refreshErr);
           }
         }
       }
 
       if (!createChatRes.ok) {
         const errorText = await createChatRes.text();
-        console.error('Create chat error:', errorText);
-        throw new Error('Failed to create chat');
+        console.error("Create chat error:", errorText);
+        throw new Error("Failed to create chat");
       }
 
       const chatData = await createChatRes.json();
@@ -1002,12 +1090,12 @@ const ChatHome = () => {
         setShowNewChatModal(false);
         setShowNewChatConfirmation(false);
         setSelectedUserForNewChat(null);
-        
+
         // Set a flag to send greeting after chat is loaded
-        sessionStorage.setItem('sendGreetingOnChatLoad', newChatId);
-        
+        sessionStorage.setItem("sendGreetingOnChatLoad", newChatId);
+
         // On small screens (mobile), navigate to chat page. On wide screens, set selected chat ID
-        if (typeof window !== 'undefined' && window.innerWidth < 900) {
+        if (typeof window !== "undefined" && window.innerWidth < 900) {
           // Mobile: Navigate to chat page with greeting flag
           navigate(`/chat/${newChatId}`, { state: { sendGreeting: true } });
         } else {
@@ -1015,11 +1103,11 @@ const ChatHome = () => {
           setSelectedChatId(newChatId);
         }
       } else {
-        throw new Error('Chat ID not found in response');
+        throw new Error("Chat ID not found in response");
       }
     } catch (err) {
-      console.error('Error creating chat:', err);
-      alert('Failed to create chat. Please try again.');
+      console.error("Error creating chat:", err);
+      alert("Failed to create chat. Please try again.");
     } finally {
       setIsCreatingChat(false);
     }
@@ -1033,240 +1121,231 @@ const ChatHome = () => {
       chat_id: parseInt(chatId),
       sender_id: userId,
       message_text: messageToSend,
-      message_type: 'text'
+      message_type: "text",
     };
 
-    console.log('📨 Sending greeting message:', messageData);
     socketService.sendMessage(messageData);
     // ChatWindow will receive the message via socket and display it
   };
 
-  const clearAllSelection = async() => {
-    setSelectedChats(prev =>
-      Object.fromEntries(Object.keys(prev).map(key => [key, false]))
+  const clearAllSelection = async () => {
+    setSelectedChats((prev) =>
+      Object.fromEntries(Object.keys(prev).map((key) => [key, false]))
     );
     setChatSelection(false);
-  }
+  };
 
-  const deleteAllSelectedChats = async() => {
-    try{
-      const selectedChatIds = Object.keys(selectedChats).filter(key => selectedChats[key] === true).map(key => Number(key));
+  const deleteAllSelectedChats = async () => {
+    try {
+      const selectedChatIds = Object.keys(selectedChats)
+        .filter((key) => selectedChats[key] === true)
+        .map((key) => Number(key));
 
-      if(selectedChatIds.length > 0) {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-        const token = localStorage.getItem('accessToken');
+      if (selectedChatIds.length > 0) {
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
         const fullUrl = `${API_URL}/api/chat-visibility/batch/delete`;
 
         const res = await fetch(fullUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ chatIds: selectedChatIds }),
         });
 
-
-        console.log(`Response status: ${res.status}`, {
-          ok: res.ok,
-          statusText: res.statusText
-        });
-
         if (res.ok) {
           // Update local state
-          // const updated = chats.map(chat => 
+          // const updated = chats.map(chat =>
           //   selectedChats[chat.chat_id]
           //   ? { ...chat, pinned: true }
           //   : chat
           // )
 
-          setChats(prevChats => 
-            prevChats.filter(c => 
-              !selectedChats[c.chat_id] 
-            )
+          setChats((prevChats) =>
+            prevChats.filter((c) => !selectedChats[c.chat_id])
           );
 
           // setChats(sortChatsByTimestamp(updated));
-          showToast('Deleted Selected Chats successfully', 'success');
+          showToast("Deleted Selected Chats successfully", "success");
         } else {
           const errorText = await res.text();
-          console.error('Backend error response:', errorText);
-          showToast(`Failed to update pin status (${res.status})`, 'error');
+          console.error("Backend error response:", errorText);
+          showToast(`Failed to update pin status (${res.status})`, "error");
         }
       }
-    } catch(err) {
-      console.error('Error pinning chat:', err);
-      showToast('Error updating pin status', 'error');
+    } catch (err) {
+      console.error("Error pinning chat:", err);
+      showToast("Error updating pin status", "error");
     } finally {
       clearAllSelection();
     }
-  }
+  };
 
-  
-  const markReadAllSelectedChats = async() => {
-    try{
-      const selectedChatIds = Object.keys(selectedChats).filter(key => selectedChats[key] === true).map(key => Number(key));
+  const markReadAllSelectedChats = async () => {
+    try {
+      const selectedChatIds = Object.keys(selectedChats)
+        .filter((key) => selectedChats[key] === true)
+        .map((key) => Number(key));
 
-      if(selectedChatIds.length > 0) {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-        const token = localStorage.getItem('accessToken');
+      if (selectedChatIds.length > 0) {
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
         const fullUrl = `${API_URL}/api/chat-visibility//batch/mark-read`;
 
         const res = await fetch(fullUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ chatIds: selectedChatIds }),
-        });
-
-
-        console.log(`Response status: ${res.status}`, {
-          ok: res.ok,
-          statusText: res.statusText
         });
 
         if (res.ok) {
-          setChats(prevChats => 
-          prevChats.map(c => 
-            selectedChats[c.chat_id] 
-              ? { ...c, unread_count: 0 }
-              : c
-          )
-        );
+          setChats((prevChats) =>
+            prevChats.map((c) =>
+              selectedChats[c.chat_id] ? { ...c, unread_count: 0 } : c
+            )
+          );
           // showToast('Marked Messsage Read Selected Chats successfully', 'success');
         } else {
           const errorText = await res.text();
-          console.error('Backend error response:', errorText);
-          showToast(`Failed to update pin status (${res.status})`, 'error');
+          console.error("Backend error response:", errorText);
+          showToast(`Failed to update pin status (${res.status})`, "error");
         }
       }
-    } catch(err) {
-      console.error('Error pinning chat:', err);
-      showToast('Error updating pin status', 'error');
+    } catch (err) {
+      console.error("Error pinning chat:", err);
+      showToast("Error updating pin status", "error");
     } finally {
       clearAllSelection();
     }
-  }
+  };
 
-  const pinAllSelectedChats = async() => {
-    try{
-      const selectedChatIds = Object.keys(selectedChats).filter(key => selectedChats[key] === true).map(key => Number(key));
+  const pinAllSelectedChats = async () => {
+    try {
+      const selectedChatIds = Object.keys(selectedChats)
+        .filter((key) => selectedChats[key] === true)
+        .map((key) => Number(key));
 
-      if(selectedChatIds.length > 0) {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-        const token = localStorage.getItem('accessToken');
+      if (selectedChatIds.length > 0) {
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
         const fullUrl = `${API_URL}/api/chat-visibility/batch/pin`;
 
         const res = await fetch(fullUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ chatIds: selectedChatIds }),
-        });
-
-
-        console.log(`Response status: ${res.status}`, {
-          ok: res.ok,
-          statusText: res.statusText
         });
 
         if (res.ok) {
           // Update local state
-          const updated = chats.map(chat => 
-            selectedChats[chat.chat_id]
-            ? { ...chat, pinned: true }
-            : chat
-          )
+          const updated = chats.map((chat) =>
+            selectedChats[chat.chat_id] ? { ...chat, pinned: true } : chat
+          );
 
           setChats(sortChatsByTimestamp(updated));
         } else {
           const errorText = await res.text();
-          console.error('Backend error response:', errorText);
-          showToast(`Failed to update pin status (${res.status})`, 'error');
+          console.error("Backend error response:", errorText);
+          showToast(`Failed to update pin status (${res.status})`, "error");
         }
       }
-    } catch(err) {
-      console.error('Error pinning chat:', err);
-      showToast('Error updating pin status', 'error');
+    } catch (err) {
+      console.error("Error pinning chat:", err);
+      showToast("Error updating pin status", "error");
     } finally {
       clearAllSelection();
     }
-  }
+  };
 
   return (
-    <div className="chat-home" onclick={clearAllSelection}>
-      <div 
+    <div className="chat-home" onClick={clearAllSelection}>
+      <div
         className="chat-home-container"
         ref={containerRef}
-        style={typeof window !== 'undefined' && window.innerWidth >= 900 ? {
-          gridTemplateColumns: `${leftPanelWidth}px 1fr`
-        } : {}}
+        style={
+          typeof window !== "undefined" && window.innerWidth >= 900
+            ? {
+                gridTemplateColumns: `${leftPanelWidth}px 1fr`,
+              }
+            : {}
+        }
       >
         <div className="left-panel">
-          <div className="chat-home-header">
+          <div className="chat-home-header" ref={headerRef}>
             <div className="header-top">
               <h1>{greeting}</h1>
               <div className="header-actions">
                 {chatSelection ? (
                   <>
-                    <button className="delete-chats-header-btn"
+                    <button
+                      className="delete-chats-header-btn"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         deleteAllSelectedChats();
                       }}
                     >
-                      <Trash2 size={24}/>
+                      <Trash2 size={24} />
                     </button>
-                    <button className="mark-all-read-header-btn"
+                    <button
+                      className="mark-all-read-header-btn"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         markReadAllSelectedChats();
                       }}
                     >
-                      <CircleCheckBig size={24}/>
+                      <CircleCheckBig size={24} />
                     </button>
                     <button className="mute-all-header-btn">
-                      <BellOff  size={24}/>
+                      <BellOff size={24} />
                     </button>
                     <button className="archive-all-header-btn">
-                      <Archive   size={24}/>
+                      <Archive size={24} />
                     </button>
-                    <button className="pin-all-header-btn"
+                    <button
+                      className="pin-all-header-btn"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         pinAllSelectedChats();
                       }}
                     >
-                      <Pin size={24}/>
+                      <Pin size={24} />
                     </button>
-                    <button className="cancel-all-selection-header-btn"
+                    <button
+                      className="cancel-all-selection-header-btn"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         clearAllSelection();
                       }}
                     >
-                      <X size={24}/>
+                      <X size={24} />
                     </button>
                   </>
-                ) : 
+                ) : (
                   <>
-                    <NotificationCenter 
-                      token={localStorage.getItem('accessToken')} 
+                    <NotificationCenter
+                      token={localStorage.getItem("accessToken")}
                       userId={userId}
                     />
                     {/* <button className="more-btn">
                       <MoreVertical size={24} />
                     </button> */}
                   </>
-                }
+                )}
               </div>
             </div>
             <div className="search-bar">
@@ -1281,150 +1360,203 @@ const ChatHome = () => {
             </div>
           </div>
 
-          <div className="chat-list">
-        {loading ? (
-          <div className="no-chats"><p>Loading chats...</p></div>
-        ) : error ? (
-          <div className="no-chats"><p>{error}</p></div>
-        ) : filteredChats.length > 0 ? (
-          filteredChats.map((chat) => {
-            let displayName = chat.chat_name;
-            let otherUserId = null;
-            let chatImage = null;
-            
-            if (chat.chat_type === 'private' && Array.isArray(chat.members)) {
-              // Find the other member
-              const other = chat.members.find(m => m.user_id !== userId);
-              if (other) {
-                otherUserId = other.user_id;
-                if (other.user && other.user.full_name) {
-                  displayName = other.user.full_name;
-                } else if (other.user && other.user.username) {
-                  displayName = other.user.username;
-                }
-              }
-            } else if (chat.chat_type === 'group') {
-              // Use fetched blob URL for group chat image
-              chatImage = chatImages[chat.chat_id];
-            }
-            
-            // Get profile pic for private chats
-            const profilePic = otherUserId && userProfiles[otherUserId]?.profile_pic;
-            
-            // Get initials from display name
-            const getInitials = (name) => {
-              if (!name) return '💬';
-              const words = name.trim().split(' ');
-              if (words.length >= 2) {
-                return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-              }
-              return name.substring(0, 2).toUpperCase();
-            };
-            
-            return (
-              <div
-                key={chat.chat_id}
-                className={`chat-item ${selectedChatId === chat.chat_id ? 'selected' : ''} ${selectedChats[chat.chat_id] ? 'selection' : ''}`}
-                onClick={() => {
-                  if(chatSelection) {
-                    handleChatsSelection(chat.chat_id);
-                  }
-                  else handleChatClick(chat.chat_id)
-                }}
-                onContextMenu={(e) => handleChatContextMenu(e, chat)}
-              >
-                <div 
-                  className="chat-avatar"
-                  onClick={(e) => handleChatAvatarClick(e, chat)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {(profilePic || chatImage) ? (
-                    <img 
-                      src={profilePic || chatImage} 
-                      alt={chat.chat_type === 'group' ? 'group' : 'profile'}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  ) : (
-                    <span className="avatar-emoji">{chat.chat_type === 'private' ? getInitials(displayName) : '💬'}</span>
-                  )}
-                </div>
-                <div className="chat-info">
-                  <div className="chat-header-info">
-                    <h3 className="chat-name">{displayName}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {chat.unread_count > 0 && (
-                        <span 
-                          style={{
-                            backgroundColor: 'var(--accent-color)',
-                            color: 'white',
-                            borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            flexShrink: 0
-                          }}
+          <div className="chat-list-wrapper">
+            <SimpleBar style={{ maxHeight: chatListHeight }}>
+              <div className="chat-list">
+                {loading ? (
+                  <div className="no-chats">
+                    <p>Loading chats...</p>
+                  </div>
+                ) : error ? (
+                  <div className="no-chats">
+                    <p>{error}</p>
+                  </div>
+                ) : filteredChats.length > 0 ? (
+                  filteredChats.map((chat) => {
+                    let displayName = chat.chat_name;
+                    let otherUserId = null;
+                    let chatImage = null;
+
+                    if (
+                      chat.chat_type === "private" &&
+                      Array.isArray(chat.members)
+                    ) {
+                      // Find the other member
+                      const other = chat.members.find(
+                        (m) => m.user_id !== userId
+                      );
+                      if (other) {
+                        otherUserId = other.user_id;
+                        if (other.user && other.user.full_name) {
+                          displayName = other.user.full_name;
+                        } else if (other.user && other.user.username) {
+                          displayName = other.user.username;
+                        }
+                      }
+                    } else if (chat.chat_type === "group") {
+                      // Use fetched blob URL for group chat image
+                      chatImage = chatImages[chat.chat_id];
+                    }
+
+                    // Get profile pic for private chats
+                    const profilePic =
+                      otherUserId && userProfiles[otherUserId]?.profile_pic;
+
+                    // Get initials from display name
+                    const getInitials = (name) => {
+                      if (!name) return "💬";
+                      const words = name.trim().split(" ");
+                      if (words.length >= 2) {
+                        return (
+                          words[0][0] + words[words.length - 1][0]
+                        ).toUpperCase();
+                      }
+                      return name.substring(0, 2).toUpperCase();
+                    };
+
+                    return (
+                      <div
+                        key={chat.chat_id}
+                        className={`chat-item ${
+                          selectedChatId === chat.chat_id ? "selected" : ""
+                        } ${selectedChats[chat.chat_id] ? "selection" : ""}`}
+                        onClick={() => {
+                          if (chatSelection) {
+                            handleChatsSelection(chat.chat_id);
+                          } else handleChatClick(chat.chat_id);
+                        }}
+                        onContextMenu={(e) => handleChatContextMenu(e, chat)}
+                      >
+                        <div
+                          className="chat-avatar"
+                          onClick={(e) => handleChatAvatarClick(e, chat)}
+                          style={{ cursor: "pointer" }}
                         >
-                          {chat.unread_count > 99 ? '99+' : chat.unread_count}
-                        </span>
-                      )}
-                      { chat.pinned && (
-                        <Pin color="var(--accent-color)" size={16} strokeWidth={2} />
-                      )}
-                      <span className="chat-time">{formatChatPreviewTime(chat.last_message?.created_at)}</span>
-                    </div>
+                          {profilePic || chatImage ? (
+                            <img
+                              src={profilePic || chatImage}
+                              alt={
+                                chat.chat_type === "group" ? "group" : "profile"
+                              }
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <span className="avatar-emoji">
+                              {chat.chat_type === "private"
+                                ? getInitials(displayName)
+                                : "💬"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="chat-info">
+                          <div className="chat-header-info">
+                            <h3 className="chat-name">{displayName}</h3>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              {chat.unread_count > 0 && (
+                                <span
+                                  style={{
+                                    backgroundColor: "var(--accent-color)",
+                                    color: "white",
+                                    borderRadius: "50%",
+                                    width: "24px",
+                                    height: "24px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: "600",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {chat.unread_count > 99
+                                    ? "99+"
+                                    : chat.unread_count}
+                                </span>
+                              )}
+                              {chat.pinned && (
+                                <Pin
+                                  color="var(--accent-color)"
+                                  size={16}
+                                  strokeWidth={2}
+                                />
+                              )}
+                              <span className="chat-time">
+                                {formatChatPreviewTime(
+                                  chat.last_message?.created_at
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="chat-last-message">
+                            <p className="last-message">
+                              {chat.last_message?.preview_text ||
+                                "No messages yet"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="no-chats">
+                    <MessageCircle size={64} className="no-chats-icon" />
+                    <p>No conversations found</p>
                   </div>
-                  <div className="chat-last-message">
-                    <p className="last-message">{chat.last_message?.preview_text || 'No messages yet'}</p>
-                  </div>
-                </div>
+                )}
               </div>
-            );
-          })
-        ) : (
-          <div className="no-chats">
-            <MessageCircle size={64} className="no-chats-icon" />
-            <p>No conversations found</p>
+            </SimpleBar>
           </div>
-        )}
-      </div>
 
           <button className="new-chat-btn" onClick={handleNewChat}>
-        <Plus size={24} />
-      </button>
+            <Plus size={24} />
+          </button>
 
-          <BottomTabBar activeTab="chats" />
+          <div ref={bottomTabBarRef}>
+            <BottomTabBar activeTab="chats" />
+          </div>
         </div>
 
         <div className="right-panel">
           {selectedChatId ? (
-            <ChatWindow chatId={selectedChatId} isEmbedded={true} onMemberClick={(memberId) => {
-              setSelectedUserForModal(memberId);
-              setShowUserProfileModal(true);
-            }} />
+            <ChatWindow
+              chatId={selectedChatId}
+              isEmbedded={true}
+              onMemberClick={(memberId) => {
+                setSelectedUserForModal(memberId);
+                setShowUserProfileModal(true);
+              }}
+            />
           ) : (
             <div className="chat-placeholder">
               <p>Select a conversation to start chatting</p>
             </div>
           )}
         </div>
+      </div>
 
-  </div>
-
-  {showNewChatModal && (
-        <div className="modal-overlay" onClick={() => setShowNewChatModal(false)}>
+      {showNewChatModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowNewChatModal(false)}
+        >
           <div className="new-chat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>New Chat</h2>
-              <button className="modal-close-btn" onClick={() => setShowNewChatModal(false)}>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowNewChatModal(false)}
+              >
                 ×
               </button>
             </div>
@@ -1453,24 +1585,28 @@ const ChatHome = () => {
                   >
                     <div className="user-avatar">
                       {user.profile_pic ? (
-                        <img 
-                          src={user.profile_pic} 
+                        <img
+                          src={user.profile_pic}
                           alt="profile"
                           style={{
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "50%",
+                            objectFit: "cover",
                           }}
                         />
                       ) : (
                         <span className="avatar-text">
-                          {user.full_name 
-                            ? user.full_name.split(' ').length >= 2 
-                              ? (user.full_name.split(' ')[0][0] + user.full_name.split(' ')[user.full_name.split(' ').length - 1][0]).toUpperCase()
+                          {user.full_name
+                            ? user.full_name.split(" ").length >= 2
+                              ? (
+                                  user.full_name.split(" ")[0][0] +
+                                  user.full_name.split(" ")[
+                                    user.full_name.split(" ").length - 1
+                                  ][0]
+                                ).toUpperCase()
                               : user.full_name.substring(0, 2).toUpperCase()
-                            : user.username.substring(0, 2).toUpperCase()
-                          }
+                            : user.username.substring(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -1481,7 +1617,9 @@ const ChatHome = () => {
                   </div>
                 ))
               ) : (
-                <p className="modal-message">Search for users to start a new chat</p>
+                <p className="modal-message">
+                  Search for users to start a new chat
+                </p>
               )}
             </div>
           </div>
@@ -1541,7 +1679,9 @@ const ChatHome = () => {
       <ConfirmationBox
         isOpen={showNewChatConfirmation}
         title="Start New Chat"
-        message={`Start a new conversation with ${selectedUserForNewChat?.full_name || selectedUserForNewChat?.username}?`}
+        message={`Start a new conversation with ${
+          selectedUserForNewChat?.full_name || selectedUserForNewChat?.username
+        }?`}
         confirmText='Send "Hello!👋"'
         cancelText="Cancel"
         isLoading={isCreatingChat}
@@ -1554,7 +1694,6 @@ const ChatHome = () => {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-
     </div>
   );
 };

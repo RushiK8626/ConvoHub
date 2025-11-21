@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, CheckCheck } from 'lucide-react';
+import React from "react";
+import { Check, CheckCheck } from "lucide-react";
 
 const MessageStatusIndicator = ({ messageId, statuses, currentUserId }) => {
   if (!messageId) return null;
@@ -11,21 +11,21 @@ const MessageStatusIndicator = ({ messageId, statuses, currentUserId }) => {
     // Default to 'sent' if no status
     // console.log(`[STATUS INDICATOR] No statuses for message ${messageId}, showing single tick`);
     return (
-      <Check 
-        size={14} 
-        style={{ 
-          marginLeft: 4, 
+      <Check
+        size={14}
+        style={{
+          marginLeft: 4,
           opacity: 0.7,
-          color: 'currentColor'
-        }} 
+          color: "currentColor",
+        }}
       />
     );
   }
 
   // For messages the current user SENT, we need to check OTHER users' status
   // Find the highest status among all OTHER users
-  let highestStatus = 'sent';
-  
+  let highestStatus = "sent";
+
   const otherUsersStatuses = Object.entries(statuses)
     .filter(([uid]) => uid.toString() !== currentUserId?.toString())
     .map(([, status]) => status);
@@ -33,84 +33,83 @@ const MessageStatusIndicator = ({ messageId, statuses, currentUserId }) => {
   // console.log(`[STATUS INDICATOR] Other users statuses for message ${messageId}:`, otherUsersStatuses);
 
   // Determine highest status (read > delivered > sent)
-  if (otherUsersStatuses.some(s => s === 'read')) {
-    highestStatus = 'read';
-  } else if (otherUsersStatuses.some(s => s === 'delivered')) {
-    highestStatus = 'delivered';
+  if (otherUsersStatuses.some((s) => s === "read")) {
+    highestStatus = "read";
+  } else if (otherUsersStatuses.some((s) => s === "delivered")) {
+    highestStatus = "delivered";
   } else {
-    highestStatus = 'sent';
+    highestStatus = "sent";
   }
 
   // console.log(`[STATUS INDICATOR] Message ${messageId} highest status=${highestStatus}`);
 
   // Show status based on highest status among other users
-  if (highestStatus === 'sent') {
+  if (highestStatus === "sent") {
     return (
-      <Check 
-        size={14} 
-        style={{ 
-          marginLeft: 4, 
+      <Check
+        size={14}
+        style={{
+          marginLeft: 4,
           opacity: 0.7,
-          color: 'currentColor'
-        }} 
+          color: "currentColor",
+        }}
       />
     );
   }
 
   // Show status based on highest status among other users
-  if (highestStatus === 'sent') {
+  if (highestStatus === "sent") {
     return (
-      <Check 
-        size={14} 
-        style={{ 
-          marginLeft: 4, 
+      <Check
+        size={14}
+        style={{
+          marginLeft: 4,
           opacity: 0.7,
-          color: 'currentColor'
-        }} 
+          color: "currentColor",
+        }}
       />
     );
   }
 
   // Double ticks with gray for delivered
-  if (highestStatus === 'delivered') {
+  if (highestStatus === "delivered") {
     return (
-      <CheckCheck 
-        size={14} 
-        style={{ 
-          marginLeft: 4, 
+      <CheckCheck
+        size={14}
+        style={{
+          marginLeft: 4,
           opacity: 0.7,
-          color: 'currentColor'
-        }} 
+          color: "currentColor",
+        }}
       />
     );
   }
 
   // Double ticks with blue color for read
-  if (highestStatus === 'read') {
+  if (highestStatus === "read") {
     return (
-      <CheckCheck 
-        size={14} 
-        style={{ 
-          marginLeft: 4, 
-          color: '#007AFF', // Blue color for read
-          fill: '#007AFF'
-        }} 
+      <CheckCheck
+        size={14}
+        style={{
+          marginLeft: 4,
+          color: "#007AFF", // Blue color for read
+          fill: "#007AFF",
+        }}
       />
     );
   }
 
   // Fallback
   return (
-    <Check 
-      size={14} 
-      style={{ 
-        marginLeft: 4, 
+    <Check
+      size={14}
+      style={{
+        marginLeft: 4,
         opacity: 0.7,
-        color: 'currentColor'
-      }} 
+        color: "currentColor",
+      }}
     />
   );
 };
 
 export default MessageStatusIndicator;
-

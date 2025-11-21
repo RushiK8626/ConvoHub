@@ -1,25 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Loader } from 'lucide-react';
-import './UpdateGroupInfoModal.css';
+import React, { useState, useEffect } from "react";
+import { X, Upload, Image as ImageIcon, Loader } from "lucide-react";
+import "./UpdateGroupInfoModal.css";
 
-const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpdateSuccess }) => {
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
+const UpdateGroupInfoModal = ({
+  isOpen,
+  onClose,
+  chatId,
+  currentChatInfo,
+  onUpdateSuccess,
+}) => {
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
   const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Initialize form with current chat info
   useEffect(() => {
     if (isOpen && currentChatInfo) {
-      setGroupName(currentChatInfo.name || '');
-      setGroupDescription(currentChatInfo.description || '');
+      setGroupName(currentChatInfo.name || "");
+      setGroupDescription(currentChatInfo.description || "");
       setCurrentImage(currentChatInfo.chat_image || null);
       setSelectedImage(null);
       setImagePreview(null);
-      setError('');
+      setError("");
     }
   }, [isOpen, currentChatInfo]);
 
@@ -29,13 +35,13 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        setError('Image size must be less than 10MB');
+        setError("Image size must be less than 10MB");
         return;
       }
 
       setSelectedImage(file);
-      setError('');
-      
+      setError("");
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -52,67 +58,63 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
 
   const handleUpdateGroup = async () => {
     if (!groupName.trim()) {
-      setError('Please enter a group name');
+      setError("Please enter a group name");
       return;
     }
 
     try {
       setUpdating(true);
-      setError('');
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      let token = localStorage.getItem('accessToken');
+      setError("");
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      let token = localStorage.getItem("accessToken");
 
       // Prepare form data
       const formData = new FormData();
-      formData.append('chat_name', groupName.trim());
-      formData.append('description', groupDescription.trim());
+      formData.append("chat_name", groupName.trim());
+      formData.append("description", groupDescription.trim());
 
       if (selectedImage) {
-        formData.append('group_image', selectedImage);
+        formData.append("group_image", selectedImage);
       }
 
-      console.log('📤 Sending update group request:', { 
-        chatId, 
-        chat_name: groupName.trim(),
-        chat_description: groupDescription.trim(),
-        hasImage: !!selectedImage 
-      });
-
       let updateRes = await fetch(`${API_URL}/api/chats/${chatId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
 
       // If unauthorized, try to refresh token
       if (updateRes.status === 401) {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = localStorage.getItem("refreshToken");
         if (refreshToken) {
           try {
-            const refreshRes = await fetch(`${API_URL}/api/auth/refresh-token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken: String(refreshToken) }),
-            });
+            const refreshRes = await fetch(
+              `${API_URL}/api/auth/refresh-token`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: String(refreshToken) }),
+              }
+            );
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json();
-              localStorage.setItem('accessToken', refreshData.accessToken);
+              localStorage.setItem("accessToken", refreshData.accessToken);
               token = refreshData.accessToken;
 
               // Retry with new token
               updateRes = await fetch(`${API_URL}/api/chats/${chatId}`, {
-                method: 'PUT',
+                method: "PUT",
                 headers: {
-                  'Authorization': `Bearer ${token}`,
+                  Authorization: `Bearer ${token}`,
                 },
                 body: formData,
               });
             }
           } catch (refreshErr) {
-            console.error('Token refresh failed:', refreshErr);
-            setError('Session expired. Please try again.');
+            console.error("Token refresh failed:", refreshErr);
+            setError("Session expired. Please try again.");
             setUpdating(false);
             return;
           }
@@ -121,13 +123,17 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
 
       if (!updateRes.ok) {
         const errorData = await updateRes.json().catch(() => ({}));
-        console.error('Update group error:', { status: updateRes.status, error: errorData });
-        throw new Error(errorData.message || `Failed to update group (Status: ${updateRes.status})`);
+        console.error("Update group error:", {
+          status: updateRes.status,
+          error: errorData,
+        });
+        throw new Error(
+          errorData.message ||
+            `Failed to update group (Status: ${updateRes.status})`
+        );
       }
 
       const updatedData = await updateRes.json();
-      
-      console.log('✅ Group updated successfully:', updatedData);
 
       // Call success callback with updated chat info
       if (onUpdateSuccess) {
@@ -136,8 +142,8 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
 
       onClose();
     } catch (err) {
-      console.error('Error updating group:', err);
-      setError(err.message || 'Failed to update group');
+      console.error("Error updating group:", err);
+      setError(err.message || "Failed to update group");
     } finally {
       setUpdating(false);
     }
@@ -150,7 +156,11 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
       <div className="update-group-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Update Group Info</h2>
-          <button className="modal-close-btn" onClick={onClose} disabled={updating}>
+          <button
+            className="modal-close-btn"
+            onClick={onClose}
+            disabled={updating}
+          >
             ×
           </button>
         </div>
@@ -197,7 +207,7 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
                   accept="image/*"
                   onChange={handleImageSelect}
                   disabled={updating}
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                 />
               </label>
             </div>
@@ -251,11 +261,17 @@ const UpdateGroupInfoModal = ({ isOpen, onClose, chatId, currentChatInfo, onUpda
           >
             {updating ? (
               <>
-                <Loader size={16} style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />
+                <Loader
+                  size={16}
+                  style={{
+                    animation: "spin 1s linear infinite",
+                    marginRight: "8px",
+                  }}
+                />
                 Updating...
               </>
             ) : (
-              'Update'
+              "Update"
             )}
           </button>
         </div>

@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { useToast } from '../hooks/useToast';
-import ToastContainer from '../components/ToastContainer';
-import './Login.css';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useToast } from "../hooks/useToast";
+import ToastContainer from "../components/ToastContainer";
+import "./Login.css";
 
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
   });
   const [errors, setErrors] = useState({});
   const { toasts, showSuccess, showError, showInfo, removeToast } = useToast();
@@ -19,76 +19,81 @@ const Login = () => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
     // Clear error when user starts typing
     if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' });
+      setErrors({ ...errors, [e.target.name]: "" });
     }
   };
 
   const validateForm = () => {
-  const newErrors = {};
-  if (!formData.username) newErrors.username = 'Username is required';
-  if (!formData.password) newErrors.password = 'Password is required';
-  return newErrors;
-};
+    const newErrors = {};
+    if (!formData.username) newErrors.username = "Username is required";
+    if (!formData.password) newErrors.password = "Password is required";
+    return newErrors;
+  };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  const newErrors = validateForm();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = validateForm();
 
-  if (Object.keys(newErrors).length === 0) {
-    setLoading(true);
-    try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.username,
-          password: formData.password,
-        }),
-      });
+    if (Object.keys(newErrors).length === 0) {
+      setLoading(true);
+      try {
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
 
-      if (response.ok) {
-        // showSuccess("OTP sent to your registered email");
-        const data = await response.json();
-        // Navigate to OTP verification with userId and other details
-        navigate('/verify-otp', { 
-          state: { 
-            userId: data.userId,
-            username: data.username,
-            type: 'login',
-            message: data.message,
-            expiresIn: data.expiresIn || 300
-          } 
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: formData.username,
+            email: formData.username,
+            password: formData.password,
+          }),
         });
-      } else if(response.status == 401) {
-        showError("Invalid Credentials. Login Failed");
-      }
-       else {
-        const errData = await response.json();
-        showError("Login Failed. Please try again");
-        setErrors({ api: errData.error || errData.message || 'Login failed. Please try again.' });
-      }
-    } catch (error) {
-      showError("Unable to connect to server. Please try again later.");
-      setErrors({ api: 'Unable to connect to server. Please try again later.' });
-      console.error('Login error:', error);
-    } finally {
-      setLoading(false);
-    }
-  } else {
-    showError(newErrors);
-    setErrors(newErrors);
-  }
-};
 
+        if (response.ok) {
+          const data = await response.json();
+          // Navigate to OTP verification with userId and other details
+          navigate("/verify-otp", {
+            state: {
+              userId: data.userId,
+              username: data.username,
+              type: "login",
+              message: data.message,
+              expiresIn: data.expiresIn || 300,
+            },
+          });
+        } else if (response.status == 401) {
+          showError("Invalid Credentials. Login Failed");
+        } else {
+          const errData = await response.json();
+          showError("Login Failed. Please try again");
+          setErrors({
+            api:
+              errData.error ||
+              errData.message ||
+              "Login failed. Please try again.",
+          });
+        }
+      } catch (error) {
+        showError("Unable to connect to server. Please try again later.");
+        setErrors({
+          api: "Unable to connect to server. Please try again later.",
+        });
+        console.error("Login error:", error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      showError(newErrors);
+      setErrors(newErrors);
+    }
+  };
 
   return (
     <div className="login-container">
@@ -100,8 +105,6 @@ const handleSubmit = async (e) => {
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          {/* {errors.api && <div className="error-text" style={{ color: 'red', marginBottom: '16px', textAlign: 'center' }}>{errors.api}</div>} */}
-          
           <div className="form-group">
             <label htmlFor="username">Username or Email</label>
             <div className="input-wrapper">
@@ -110,13 +113,15 @@ const handleSubmit = async (e) => {
                 type="text"
                 id="username"
                 name="username"
-                className={`input-field ${errors.username ? 'error' : ''}`}
+                className={`input-field ${errors.username ? "error" : ""}`}
                 placeholder="Enter your username or email"
                 value={formData.username}
                 onChange={handleChange}
               />
             </div>
-            {errors.username && <span className="error-text">{errors.username}</span>}
+            {errors.username && (
+              <span className="error-text">{errors.username}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -124,10 +129,10 @@ const handleSubmit = async (e) => {
             <div className="input-wrapper">
               <Lock className="input-icon" size={20} />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 id="password"
                 name="password"
-                className={`input-field ${errors.password ? 'error' : ''}`}
+                className={`input-field ${errors.password ? "error" : ""}`}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleChange}
@@ -140,7 +145,9 @@ const handleSubmit = async (e) => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {errors.password && <span className="error-text">{errors.password}</span>}
+            {errors.password && (
+              <span className="error-text">{errors.password}</span>
+            )}
           </div>
 
           <div className="form-options">
@@ -153,14 +160,18 @@ const handleSubmit = async (e) => {
             </Link>
           </div>
 
-          <button type="submit" className="btn-primary btn-login" disabled={loading}>
-            {loading ? 'Logging in...' : 'Log in'}
+          <button
+            type="submit"
+            className="btn-primary btn-login"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
         <div className="login-footer">
           <p>
-            Don't have an account?{' '}
+            Don't have an account?{" "}
             <Link to="/register" className="register-link">
               Sign Up
             </Link>

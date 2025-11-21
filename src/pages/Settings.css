@@ -5,6 +5,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Hide scrollbars */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.settings-page::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* When embedded as right panel in split layout, remove padding and use full height */
@@ -14,19 +23,31 @@
   padding-bottom: 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 600px) {
   .settings-page {
-    max-width: 640px;
+    max-width: 100%;
+    margin: auto;
+  }
+}
+
+@media (min-width: 600px) {
+  .settings-page {
+    max-width: 95%;
     margin: 0 auto;
   }
 }
 
-.settings-left-panel .PageHeader{
-
-}
-
 .settings-content {
   animation: fadeIn 0.4s ease-out;
+  /* Hide scrollbars */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.settings-content::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .settings-section {
@@ -186,13 +207,41 @@
 .settings-container {
   display: block;
   height: 100vh;
+  /* Hide scrollbars */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow-x: hidden;
+}
+
+.settings-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .settings-left-panel {
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  /* Hide scrollbars */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow-x: hidden;
+}
+
+.settings-left-panel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.settings-menu-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
 }
 
 .settings-menu {
@@ -201,6 +250,16 @@
 
 .settings-right-panel {
   display: none;
+  /* Hide scrollbars */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow-x: hidden;
+}
+
+.settings-right-panel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .settings-placeholder {
@@ -260,6 +319,17 @@
     width: 100% !important;
     min-width: unset !important;
     overflow: auto;
+    /* Hide scrollbars */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overflow-x: hidden;
+  }
+
+  .settings-page[data-embedded="true"]
+    .settings-right-panel::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .settings-container {
@@ -267,6 +337,7 @@
     height: 100vh;
     position: relative;
     width: 100%;
+    overflow: hidden;
   }
 
   .settings-left-panel {
@@ -281,10 +352,11 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
     overflow-x: hidden;
-    overflow-y: hidden;
+    position: relative;
   }
 
   .settings-left-panel::-webkit-scrollbar {
+    display: none;
     width: 0;
     height: 0;
   }
@@ -294,7 +366,7 @@
   }
 
   .settings-left-panel::after {
-    content: '';
+    content: "";
     position: absolute;
     right: -2px;
     top: 0;
@@ -317,9 +389,11 @@
     padding-bottom: 20px;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    overflow-x: hidden;
   }
 
   .settings-menu::-webkit-scrollbar {
+    display: none;
     width: 0;
     height: 0;
   }
@@ -336,6 +410,7 @@
   }
 
   .settings-right-panel::-webkit-scrollbar {
+    display: none;
     width: 0;
     height: 0;
   }
@@ -367,7 +442,7 @@
     border-radius: 40px;
   }
 
-  .bottom-tab-bar{
+  .bottom-tab-bar {
     max-width: 80%;
     margin: auto !important;
     margin-bottom: 15px !important;
@@ -377,4 +452,16 @@
     flex: 1;
     padding: 12px 8px;
   }
+}
+
+/* Global scrollbar hiding for all child elements */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

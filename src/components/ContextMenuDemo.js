@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import ContextMenu from './ContextMenu';
+import React, { useState } from "react";
+import ContextMenu from "./ContextMenu";
 import {
   Copy,
   Trash2,
@@ -11,8 +11,8 @@ import {
   Archive,
   Mute,
   Users,
-} from 'lucide-react';
-import './ContextMenuDemo.css';
+} from "lucide-react";
+import "./ContextMenuDemo.css";
 
 /**
  * Demo Component for ContextMenu
@@ -30,110 +30,110 @@ const ContextMenuDemo = () => {
   // Message context menu items
   const messageMenuItems = [
     {
-      id: 'copy',
-      label: 'Copy',
+      id: "copy",
+      label: "Copy",
       icon: <Copy size={16} />,
-      onClick: () => alert('Message copied'),
+      onClick: () => alert("Message copied"),
     },
     {
-      id: 'reply',
-      label: 'Reply',
+      id: "reply",
+      label: "Reply",
       icon: <Forward size={16} />,
-      onClick: () => alert('Reply mode activated'),
+      onClick: () => alert("Reply mode activated"),
     },
     {
-      id: 'divider1',
+      id: "divider1",
       divider: true,
     },
     {
-      id: 'pin',
-      label: 'Pin Message',
+      id: "pin",
+      label: "Pin Message",
       icon: <Pin size={16} />,
-      onClick: () => alert('Message pinned'),
+      onClick: () => alert("Message pinned"),
     },
     {
-      id: 'react',
-      label: 'React',
+      id: "react",
+      label: "React",
       icon: <Heart size={16} />,
-      onClick: () => alert('Reaction menu opened'),
+      onClick: () => alert("Reaction menu opened"),
     },
     {
-      id: 'divider2',
+      id: "divider2",
       divider: true,
     },
     {
-      id: 'delete',
-      label: 'Delete',
+      id: "delete",
+      label: "Delete",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('Message deleted'),
+      color: "danger",
+      onClick: () => alert("Message deleted"),
     },
   ];
 
   // Chat list context menu items
   const chatMenuItems = [
     {
-      id: 'archive',
-      label: 'Archive',
+      id: "archive",
+      label: "Archive",
       icon: <Archive size={16} />,
-      onClick: () => alert('Chat archived'),
+      onClick: () => alert("Chat archived"),
     },
     {
-      id: 'mute',
-      label: 'Mute',
+      id: "mute",
+      label: "Mute",
       icon: <Mute size={16} />,
-      onClick: () => alert('Chat muted'),
+      onClick: () => alert("Chat muted"),
     },
     {
-      id: 'pin-chat',
-      label: 'Pin',
+      id: "pin-chat",
+      label: "Pin",
       icon: <Pin size={16} />,
-      onClick: () => alert('Chat pinned'),
+      onClick: () => alert("Chat pinned"),
     },
     {
-      id: 'divider',
+      id: "divider",
       divider: true,
     },
     {
-      id: 'delete-chat',
-      label: 'Delete Chat',
+      id: "delete-chat",
+      label: "Delete Chat",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('Chat deleted'),
+      color: "danger",
+      onClick: () => alert("Chat deleted"),
     },
   ];
 
   // Three dots menu items
   const threeDotsMenuItems = [
     {
-      id: 'mute-all',
-      label: 'Mute All Notifications',
+      id: "mute-all",
+      label: "Mute All Notifications",
       icon: <Mute size={16} />,
-      onClick: () => alert('All notifications muted'),
+      onClick: () => alert("All notifications muted"),
     },
     {
-      id: 'members',
-      label: 'Group Members',
+      id: "members",
+      label: "Group Members",
       icon: <Users size={16} />,
-      onClick: () => alert('Members list opened'),
+      onClick: () => alert("Members list opened"),
     },
     {
-      id: 'divider',
+      id: "divider",
       divider: true,
     },
     {
-      id: 'report',
-      label: 'Report',
+      id: "report",
+      label: "Report",
       icon: <Flag size={16} />,
-      color: 'warning',
-      onClick: () => alert('Report submitted'),
+      color: "warning",
+      onClick: () => alert("Report submitted"),
     },
     {
-      id: 'delete-group',
-      label: 'Delete Group',
+      id: "delete-group",
+      label: "Delete Group",
       icon: <Trash2 size={16} />,
-      color: 'danger',
-      onClick: () => alert('Group deleted'),
+      color: "danger",
+      onClick: () => alert("Group deleted"),
     },
   ];
 
@@ -194,7 +194,9 @@ const ContextMenuDemo = () => {
             if (touch) handleMessageLongPress(e);
           }}
         >
-          <p>🧪 Right-click or long press on this message to see the context menu</p>
+          <p>
+            🧪 Right-click or long press on this message to see the context menu
+          </p>
           <small>Try copying, pinning, or deleting</small>
         </div>
       </section>
@@ -258,23 +260,47 @@ const ContextMenuDemo = () => {
         <h3>📌 How to Use ContextMenu Component</h3>
         <ul>
           <li>Import the ContextMenu component</li>
-          <li>Define your menu items array with id, label, icon, and onClick</li>
-          <li>Handle user interactions (right-click, long press, or button click)</li>
+          <li>
+            Define your menu items array with id, label, icon, and onClick
+          </li>
+          <li>
+            Handle user interactions (right-click, long press, or button click)
+          </li>
           <li>Pass position (x, y) and items to the ContextMenu</li>
           <li>Add dividers between item groups using divider: true</li>
-          <li>Use color prop for visual hierarchy (danger, warning, success, primary)</li>
+          <li>
+            Use color prop for visual hierarchy (danger, warning, success,
+            primary)
+          </li>
         </ul>
 
         <h4>Menu Item Properties:</h4>
         <ul>
-          <li><code>id</code> - Unique identifier</li>
-          <li><code>label</code> - Display text</li>
-          <li><code>icon</code> - React element (SVG icon)</li>
-          <li><code>onClick</code> - Callback function</li>
-          <li><code>color</code> - Styling variant (default, danger, warning, success, primary)</li>
-          <li><code>disabled</code> - Disable item</li>
-          <li><code>divider</code> - Show divider line</li>
-          <li><code>badge</code> - Display small badge text</li>
+          <li>
+            <code>id</code> - Unique identifier
+          </li>
+          <li>
+            <code>label</code> - Display text
+          </li>
+          <li>
+            <code>icon</code> - React element (SVG icon)
+          </li>
+          <li>
+            <code>onClick</code> - Callback function
+          </li>
+          <li>
+            <code>color</code> - Styling variant (default, danger, warning,
+            success, primary)
+          </li>
+          <li>
+            <code>disabled</code> - Disable item
+          </li>
+          <li>
+            <code>divider</code> - Show divider line
+          </li>
+          <li>
+            <code>badge</code> - Display small badge text
+          </li>
         </ul>
       </section>
     </div>

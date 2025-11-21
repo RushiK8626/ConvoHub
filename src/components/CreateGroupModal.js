@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { X, Search, Upload, Image as ImageIcon } from 'lucide-react';
-import './CreateGroupModal.css';
+import React, { useState, useEffect } from "react";
+import { X, Search, Upload, Image as ImageIcon } from "lucide-react";
+import "./CreateGroupModal.css";
 
-const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) => {
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
+const CreateGroupModal = ({
+  isOpen,
+  onClose,
+  onGroupCreated,
+  currentUserId,
+}) => {
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [searchMembers, setSearchMembers] = useState('');
+  const [searchMembers, setSearchMembers] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [creating, setCreating] = useState(false);
@@ -19,46 +24,63 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
 
     const fetchChatUsers = async () => {
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(`${API_URL}/api/chats/user/${currentUserId}/preview`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
+        const API_URL =
+          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(
+          `${API_URL}/api/chats/user/${currentUserId}/preview`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         if (res.ok) {
           const data = await res.json();
-          
+
           // Extract unique users from all chats
           const usersMap = {};
-          
-          data.chats?.forEach(chat => {
-            if (chat.chat_type === 'private' && Array.isArray(chat.members)) {
-              chat.members.forEach(member => {
-                if (member.user_id !== currentUserId && !usersMap[member.user_id]) {
+
+          data.chats?.forEach((chat) => {
+            if (chat.chat_type === "private" && Array.isArray(chat.members)) {
+              chat.members.forEach((member) => {
+                if (
+                  member.user_id !== currentUserId &&
+                  !usersMap[member.user_id]
+                ) {
                   usersMap[member.user_id] = {
                     user_id: member.user_id,
-                    username: member.user?.username || member.username || 'Unknown',
-                    full_name: member.user?.full_name || member.full_name || 'Unknown',
-                    profile_pic: member.user?.profile_pic || member.profile_pic || null,
+                    username:
+                      member.user?.username || member.username || "Unknown",
+                    full_name:
+                      member.user?.full_name || member.full_name || "Unknown",
+                    profile_pic:
+                      member.user?.profile_pic || member.profile_pic || null,
                   };
-                  
+
                   // Convert profile pic to full URL if needed
-                  if (usersMap[member.user_id].profile_pic && !usersMap[member.user_id].profile_pic.startsWith('http')) {
-                    const filename = usersMap[member.user_id].profile_pic.split('/uploads/').pop();
-                    usersMap[member.user_id].profile_pic = `${API_URL}/uploads/profiles/${filename}`;
+                  if (
+                    usersMap[member.user_id].profile_pic &&
+                    !usersMap[member.user_id].profile_pic.startsWith("http")
+                  ) {
+                    const filename = usersMap[member.user_id].profile_pic
+                      .split("/uploads/")
+                      .pop();
+                    usersMap[
+                      member.user_id
+                    ].profile_pic = `${API_URL}/uploads/profiles/${filename}`;
                   }
                 }
               });
             }
           });
-          
+
           setAllChatUsers(Object.values(usersMap));
         }
       } catch (err) {
-        console.error('Error fetching chat users:', err);
+        console.error("Error fetching chat users:", err);
       }
     };
 
@@ -72,12 +94,13 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
       return;
     }
 
-    const filtered = allChatUsers.filter(user => {
+    const filtered = allChatUsers.filter((user) => {
       const query = searchMembers.toLowerCase();
       return (
-        user.username.toLowerCase().includes(query) ||
-        user.full_name.toLowerCase().includes(query)
-      ) && !selectedMembers.some(m => m.user_id === user.user_id);
+        (user.username.toLowerCase().includes(query) ||
+          user.full_name.toLowerCase().includes(query)) &&
+        !selectedMembers.some((m) => m.user_id === user.user_id)
+      );
     });
 
     setSearchResults(filtered);
@@ -87,7 +110,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -98,94 +121,100 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
   };
 
   const handleAddMember = (user) => {
-    if (!selectedMembers.some(m => m.user_id === user.user_id)) {
+    if (!selectedMembers.some((m) => m.user_id === user.user_id)) {
       setSelectedMembers([...selectedMembers, user]);
-      setSearchMembers('');
+      setSearchMembers("");
     }
   };
 
   const handleRemoveMember = (userId) => {
-    setSelectedMembers(selectedMembers.filter(m => m.user_id !== userId));
+    setSelectedMembers(selectedMembers.filter((m) => m.user_id !== userId));
   };
 
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      alert('Please enter a group name');
+      alert("Please enter a group name");
       return;
     }
 
     try {
       setCreating(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      let token = localStorage.getItem('accessToken');
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      let token = localStorage.getItem("accessToken");
 
       // Prepare member IDs (include current user as admin)
-      const memberIds = [currentUserId, ...selectedMembers.map(m => m.user_id)];
+      const memberIds = [
+        currentUserId,
+        ...selectedMembers.map((m) => m.user_id),
+      ];
 
       // Validate member_ids is not empty
       if (memberIds.length === 0) {
-        alert('Please select at least one member');
+        alert("Please select at least one member");
         setCreating(false);
         return;
       }
 
       // Prepare form data for multipart request
       const formData = new FormData();
-      formData.append('chat_type', 'group');
-      formData.append('chat_name', groupName);
-      formData.append('admin_id', currentUserId);
-      formData.append('member_ids', JSON.stringify(memberIds));
-      
+      formData.append("chat_type", "group");
+      formData.append("chat_name", groupName);
+      formData.append("admin_id", currentUserId);
+      formData.append("member_ids", JSON.stringify(memberIds));
+
       if (groupDescription.trim()) {
-        formData.append('description', groupDescription);
+        formData.append("description", groupDescription);
       }
 
       if (selectedImage) {
-        formData.append('group_image', selectedImage);
+        formData.append("group_image", selectedImage);
       }
 
       let createRes = await fetch(`${API_URL}/api/chats/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
 
       // If unauthorized, try to refresh token
       if (createRes.status === 401) {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = localStorage.getItem("refreshToken");
         if (refreshToken) {
           try {
-            const refreshRes = await fetch(`${API_URL}/api/auth/refresh-token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken: String(refreshToken) }),
-            });
+            const refreshRes = await fetch(
+              `${API_URL}/api/auth/refresh-token`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: String(refreshToken) }),
+              }
+            );
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json();
-              localStorage.setItem('accessToken', refreshData.accessToken);
+              localStorage.setItem("accessToken", refreshData.accessToken);
               token = refreshData.accessToken;
 
               // Retry creating group with new token
               createRes = await fetch(`${API_URL}/api/chats/`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                  'Authorization': `Bearer ${token}`,
+                  Authorization: `Bearer ${token}`,
                 },
                 body: formData,
               });
             }
           } catch (refreshErr) {
-            console.error('Token refresh failed:', refreshErr);
+            console.error("Token refresh failed:", refreshErr);
           }
         }
       }
 
       if (!createRes.ok) {
         const errorText = await createRes.text();
-        console.error('Create group error:', errorText);
-        throw new Error('Failed to create group');
+        console.error("Create group error:", errorText);
+        throw new Error("Failed to create group");
       }
 
       const chatData = await createRes.json();
@@ -194,18 +223,18 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
       if (newChatId) {
         onGroupCreated(newChatId);
         // Reset form
-        setGroupName('');
-        setGroupDescription('');
+        setGroupName("");
+        setGroupDescription("");
         setSelectedImage(null);
         setImagePreview(null);
         setSelectedMembers([]);
-        setSearchMembers('');
+        setSearchMembers("");
       } else {
-        alert('Error creating group. Please try again.');
+        alert("Error creating group. Please try again.");
       }
     } catch (err) {
-      console.error('Error creating group:', err);
-      alert('Failed to create group. Please try again.');
+      console.error("Error creating group:", err);
+      alert("Failed to create group. Please try again.");
     } finally {
       setCreating(false);
     }
@@ -325,11 +354,11 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
                         ) : (
                           <span className="avatar-text">
                             {user.full_name
-                              ? user.full_name.split(' ').length >= 2
+                              ? user.full_name.split(" ").length >= 2
                                 ? (
-                                    user.full_name.split(' ')[0][0] +
-                                    user.full_name.split(' ')[
-                                      user.full_name.split(' ').length - 1
+                                    user.full_name.split(" ")[0][0] +
+                                    user.full_name.split(" ")[
+                                      user.full_name.split(" ").length - 1
                                     ][0]
                                   ).toUpperCase()
                                 : user.full_name.substring(0, 2).toUpperCase()
@@ -358,11 +387,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
         </div>
 
         <div className="modal-footer">
-          <button
-            className="btn-cancel"
-            onClick={onClose}
-            disabled={creating}
-          >
+          <button className="btn-cancel" onClick={onClose} disabled={creating}>
             Cancel
           </button>
           <button
@@ -370,7 +395,7 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated, currentUserId }) =>
             onClick={handleCreateGroup}
             disabled={creating || !groupName.trim()}
           >
-            {creating ? 'Creating...' : 'Create Group'}
+            {creating ? "Creating..." : "Create Group"}
           </button>
         </div>
       </div>

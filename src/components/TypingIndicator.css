@@ -64,7 +64,8 @@
 
 /* Alternative: Fade effect */
 @keyframes typingFade {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
   }
   50% {
@@ -74,7 +75,8 @@
 
 /* Alternative: Pulse effect */
 @keyframes typingPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(0.8);
     opacity: 0.5;
   }

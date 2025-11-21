@@ -29,7 +29,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -87,7 +88,7 @@
 .otp-input:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 6px rgba(10,132,255,0.06);
+  box-shadow: 0 0 0 6px rgba(10, 132, 255, 0.06);
   transform: translateY(-2px);
 }
 
@@ -116,7 +117,7 @@
 .reset-password-fields .form-group input:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 6px 18px rgba(10,132,255,0.06);
+  box-shadow: 0 6px 18px rgba(10, 132, 255, 0.06);
 }
 
 .otp-footer {

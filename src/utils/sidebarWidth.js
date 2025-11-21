@@ -3,7 +3,7 @@
  * Uses localStorage to persist the width across navigation
  */
 
-const SIDEBAR_WIDTH_KEY = 'convohub_sidebar_width';
+const SIDEBAR_WIDTH_KEY = "convohub_sidebar_width";
 const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 650;
@@ -16,7 +16,7 @@ export const getSidebarWidth = () => {
       return Math.max(MIN_WIDTH, Math.min(width, MAX_WIDTH));
     }
   } catch (e) {
-    console.error('Error reading sidebar width:', e);
+    console.error("Error reading sidebar width:", e);
   }
   return DEFAULT_WIDTH;
 };
@@ -27,7 +27,7 @@ export const setSidebarWidth = (width) => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, validWidth.toString());
     return validWidth;
   } catch (e) {
-    console.error('Error saving sidebar width:', e);
+    console.error("Error saving sidebar width:", e);
     return width;
   }
 };
