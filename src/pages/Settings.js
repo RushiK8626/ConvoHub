@@ -158,24 +158,25 @@ const Settings = ({ isEmbedded = false }) => {
 
         // Logout from backend
         if (userId) {
-          await fetch(
-            `${
-              process.env.REACT_APP_API_URL || "http://localhost:3001"
-            }/api/auth/logout`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId }),
-            }
-          );
+          const API_URL = (
+            process.env.REACT_APP_API_URL || "http://localhost:3001"
+          ).replace(/\/+$/, "");
+          
+          await fetch(`${API_URL}/api/auth/logout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId }),
+          });
         }
       } catch (e) {
         // Optionally handle error
         console.error("Logout error:", e);
       } finally {
+        // Always clear local data and redirect, even if API calls fail
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
+        localStorage.clear(); // Clear all localStorage to ensure clean logout
         // Use replace to prevent going back to protected pages
         window.location.replace("/login");
       }
