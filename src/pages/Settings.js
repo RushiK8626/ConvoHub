@@ -144,42 +144,44 @@ const Settings = ({ isEmbedded = false }) => {
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
+      // Clear local data immediately to ensure logout works even if network calls fail
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || user.user_id;
       const token = localStorage.getItem("accessToken");
 
-      try {
-        // Unsubscribe from push notifications
-        if (token) {
-          await unsubscribeFromPushNotifications(token).catch((error) => {
-            console.error("Error unsubscribing from notifications:", error);
-          });
-        }
+      // Clear localStorage first
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      localStorage.clear();
 
-        // Logout from backend
-        if (userId) {
-          const API_URL = (
-            process.env.REACT_APP_API_URL || "http://localhost:3001"
-          ).replace(/\/+$/, "");
-          
-          await fetch(`${API_URL}/api/auth/logout`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId }),
-          });
-        }
-      } catch (e) {
-        // Optionally handle error
-        console.error("Logout error:", e);
-      } finally {
-        // Always clear local data and redirect, even if API calls fail
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
-        localStorage.clear(); // Clear all localStorage to ensure clean logout
-        // Use replace to prevent going back to protected pages
+      // Attempt cleanup in background (don't wait for these)
+      Promise.race([
+        Promise.all([
+          // Unsubscribe from push notifications
+          token
+            ? unsubscribeFromPushNotifications(token).catch(() => {})
+            : Promise.resolve(),
+          // Logout from backend
+          userId
+            ? fetch(
+                `${(
+                  process.env.REACT_APP_API_URL || "http://localhost:3001"
+                ).replace(/\/+$/, "")}/api/auth/logout`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId }),
+                }
+              ).catch(() => {})
+            : Promise.resolve(),
+        ]),
+        // Timeout after 2 seconds
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]).finally(() => {
+        // Redirect to login
         window.location.replace("/login");
-      }
+      });
     }
   };
 
