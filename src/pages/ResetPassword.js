@@ -36,7 +36,9 @@ const ResetPassword = () => {
 
     setLoading(true);
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const API_URL = (
+        process.env.REACT_APP_API_URL || "http://localhost:3001"
+      ).replace(/\/+$/, "");
       console.log(
         JSON.stringify({
           userId: Number(userId),

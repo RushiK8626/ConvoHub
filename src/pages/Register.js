@@ -58,8 +58,9 @@ const Register = () => {
       setLoading(true);
       try {
         // Get server URL from environment or use default
-        const API_URL =
-          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const API_URL = (
+          process.env.REACT_APP_API_URL || "http://localhost:3001"
+        ).replace(/\/+$/, "");
 
         const response = await fetch(`${API_URL}/api/auth/register`, {
           method: "POST",

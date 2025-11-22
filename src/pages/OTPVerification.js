@@ -251,8 +251,9 @@ const OTPVerification = () => {
 
       setLoading(true);
       try {
-        const API_URL =
-          process.env.REACT_APP_API_URL || "http://localhost:3001";
+        const API_URL = (
+          process.env.REACT_APP_API_URL || "http://localhost:3001"
+        ).replace(/\/+$/, "");
         const endpoint = `${API_URL}/api/auth/reset-password`;
         const body = { userId, otpCode: otpString, newPassword };
         // Diagnostic log: show payload and endpoint so it's easy to verify the request in the browser console
