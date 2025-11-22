@@ -4,15 +4,17 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // You can set these via environment variables
 const config = {
-  // API Base URL - prioritize environment variables
-  API_BASE_URL:
+  // API Base URL - prioritize environment variables (remove trailing slashes)
+  API_BASE_URL: (
     process.env.REACT_APP_API_URL ||
-    (isDevelopment ? "http://localhost:3001" : ""),
+    (isDevelopment ? "http://localhost:3001" : "")
+  ).replace(/\/+$/, ""),
 
-  // Socket URL - prioritize environment variables
-  SOCKET_URL:
+  // Socket URL - prioritize environment variables (remove trailing slashes)
+  SOCKET_URL: (
     process.env.REACT_APP_SOCKET_URL ||
-    (isDevelopment ? "http://localhost:3001" : ""),
+    (isDevelopment ? "http://localhost:3001" : "")
+  ).replace(/\/+$/, ""),
 
   // Upload URLs
   getUploadUrl: (type, filename) => {
