@@ -311,6 +311,9 @@ const OTPVerification = () => {
           ? `${API_URL}/api/auth/verify-registration-otp`
           : `${API_URL}/api/auth/verify-otp`;
 
+      console.log('OTP Verification - API_URL:', API_URL);
+      console.log('OTP Verification - Full endpoint:', endpoint);
+
       const requestBody =
         type === "register"
           ? { username: username, otpCode: otpString }
@@ -445,6 +448,9 @@ const OTPVerification = () => {
         type === "register"
           ? `${API_URL}/api/auth/resend-registration-otp`
           : `${API_URL}/api/auth/resend-otp`;
+
+      console.log('Resend OTP - API_URL:', API_URL);
+      console.log('Resend OTP - Full endpoint:', endpoint);
 
       const requestBody =
         type === "register"
