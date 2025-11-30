@@ -30,11 +30,20 @@
 .smart-replies-container {
   background: var(--card-background) !important;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 12px;
-  margin: 8px 0;
-  box-shadow: 0 2px 8px var(--shadow);
-  animation: slideUp 0.3s ease;
+  box-shadow: 0 4px 15px var(--shadow);
+  animation: slideUp 0.2s ease;
+}
+
+/* Wrapper for Smart Replies - positions it above the input form */
+.smart-replies-wrapper {
+  position: absolute;
+  bottom: 100%;
+  left: 5px;
+  right: 5px;
+  margin-bottom: 8px;
+  z-index: 50;
 }
 
 @keyframes slideUp {
@@ -174,7 +183,8 @@
 /* Responsive */
 @media (max-width: 768px) {
   .smart-replies-container {
-    margin: 8px;
+    margin: 8px 5px;
+    padding: 10px;
   }
 
   .smart-reply-chip {

@@ -168,16 +168,13 @@ const ChatWindow = ({
         const searchBoxHeight = showSearch
           ? document.querySelector(".search-box-container")?.offsetHeight || 60
           : 0;
-        const smartRepliesHeight = showSmartReplies
-          ? smartRepliesRef.current?.offsetHeight || 0
-          : 0;
+        // Smart Replies is absolutely positioned, so don't include in height calculation
 
         // Add extra buffer for any margins/padding
         const totalOffset =
           headerHeight +
           inputHeight +
           searchBoxHeight +
-          smartRepliesHeight +
           10;
 
         setMessagesHeight(`calc(100vh - ${totalOffset}px)`);
@@ -223,7 +220,6 @@ const ChatWindow = ({
     showFilePreview,
     replyToMessage,
     uploading,
-    showSmartReplies,
     showTranslator,
     showSummary,
     showConversationStarters,
@@ -2707,10 +2703,9 @@ const ChatWindow = ({
               <TypingIndicator typingUsers={typingUsers} />
             )}
 
-            {/* AI Features */}
-            {/* Smart Replies */}
+            {/* Smart Replies - inside input container, above the form */}
             {showSmartReplies && (
-              <div ref={smartRepliesRef}>
+              <div ref={smartRepliesRef} className="smart-replies-wrapper">
                 <SmartReplies
                   chatId={chatId}
                   onSelectReply={(reply) => {
@@ -2724,13 +2719,15 @@ const ChatWindow = ({
 
             {/* Conversation Starters - show when no messages */}
             {messages.length === 0 && !loading && (
-              <ConversationStarters
-                chatId={chatId}
-                onSelectStarter={(starter) => {
-                  setMessageText(starter);
-                }}
-                disabled={uploading}
-              />
+              <div className="conversation-starters-wrapper">
+                <ConversationStarters
+                  chatId={chatId}
+                  onSelectStarter={(starter) => {
+                    setMessageText(starter);
+                  }}
+                  disabled={uploading}
+                />
+              </div>
             )}
           </>
         )}
