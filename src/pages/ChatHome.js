@@ -36,6 +36,7 @@ import {
   setSidebarWidth,
   SIDEBAR_CONFIG,
 } from "../utils/sidebarWidth";
+import { handleSessionExpiry } from "../utils/auth";
 import "./ChatHome.css";
 
 const ChatHome = () => {
@@ -211,9 +212,7 @@ const ChatHome = () => {
           // Try to refresh token
           const refreshToken = localStorage.getItem("refreshToken");
           if (!refreshToken) {
-            setError("Session expired. Please log in again.");
-            setLoading(false);
-            console.err("No refresh token found");
+            handleSessionExpiry();
             return;
           }
           try {
@@ -226,8 +225,7 @@ const ChatHome = () => {
               }
             );
             if (!refreshRes.ok) {
-              setError("Session expired. Please log in again.");
-              setLoading(false);
+              handleSessionExpiry();
               return;
             }
             const contentType = refreshRes.headers.get("content-type");
@@ -242,8 +240,7 @@ const ChatHome = () => {
             await fetchChats(true);
             return;
           } catch (refreshErr) {
-            setError("Session expired. Please log in again.");
-            setLoading(false);
+            handleSessionExpiry();
             return;
           }
         }
@@ -334,7 +331,7 @@ const ChatHome = () => {
     socketService.connect(userId);
 
     // Listen for new messages to update chat previews
-    const handleNewMessage = (message) => {
+    const handleNewMessage = async (message) => {
       // Update chats locally - move chat with new message to top and update last message
       setChats((prevChats) => {
         // Find the chat this message belongs to
@@ -342,27 +339,32 @@ const ChatHome = () => {
           (chat) => chat.chat_id === message.chat_id
         );
 
-        if (chatIndex === -1) {
-          // Chat not found - create a new chat entry from message payload
+        if (chatIndex !== -1) {
+          // Chat exists - update it with the new message
+          // Check if this message is already the last message (avoid duplicate updates)
+          const existingChat = prevChats[chatIndex];
+          if (existingChat.last_message?.message_id === message.message_id) {
+            // Message already processed, skip update
+            return prevChats;
+          }
 
-          // Build new chat from message data
-          const newChat = {
-            chat_id: message.chat_id,
-            chat_name: message.chat?.chat_name || null,
-            chat_type: message.chat?.chat_type || "private",
-            chat_image: message.chat?.chat_image || null,
-            members:
-              message.chat?.members ||
-              (message.chat?.chat_type === "private"
-                ? [{ user_id: message.sender_id, user: message.sender }]
-                : []),
+          // Increment unread count if message is not from current user and not currently selected
+          let unreadCount = prevChats[chatIndex].unread_count || 0;
+          if (
+            message.sender_id !== userId &&
+            selectedChatId !== message.chat_id
+          ) {
+            unreadCount += 1;
+          }
+
+          // Get the chat and update it with the new message info
+          const updatedChat = {
+            ...prevChats[chatIndex],
             last_message: {
               message_id: message.message_id,
               preview_text:
                 message.message_text ||
-                (message.attachments?.length
-                  ? "[Attachment]"
-                  : "Empty message"),
+                (message.attachments?.length ? "[Attachment]" : "Empty message"),
               sender: message.sender,
               has_attachment: !!(
                 message.attachments && message.attachments.length
@@ -371,56 +373,104 @@ const ChatHome = () => {
             },
             last_message_timestamp: message.created_at,
             sender_id: message.sender_id,
-            created_at: message.created_at,
-            unread_count: message.sender_id !== userId ? 1 : 0,
+            unread_count: unreadCount,
           };
 
-          // Add new chat to the beginning (it's the newest)
-          const sortedChats = sortChatsByTimestamp([newChat, ...prevChats]);
+          // Remove the chat from its current position
+          const chatsWithoutCurrent = prevChats.filter(
+            (_, index) => index !== chatIndex
+          );
+
+          // Sort all chats by last_message_timestamp (newest first)
+          const sortedChats = sortChatsByTimestamp([
+            updatedChat,
+            ...chatsWithoutCurrent,
+          ]);
+
           return sortedChats;
         }
 
-        // Increment unread count if message is not from current user and not currently selected
-        let unreadCount = prevChats[chatIndex].unread_count || 0;
-        if (
-          message.sender_id !== userId &&
-          selectedChatId !== message.chat_id
-        ) {
-          unreadCount += 1;
-        }
-
-        // Get the chat and update it with the new message info
-        const updatedChat = {
-          ...prevChats[chatIndex],
-          last_message: {
-            message_id: message.message_id,
-            preview_text:
-              message.message_text ||
-              (message.attachments?.length ? "[Attachment]" : "Empty message"),
-            sender: message.sender,
-            has_attachment: !!(
-              message.attachments && message.attachments.length
-            ),
-            created_at: message.created_at,
-          },
-          last_message_timestamp: message.created_at,
-          sender_id: message.sender_id,
-          unread_count: unreadCount,
-        };
-
-        // Remove the chat from its current position
-        const chatsWithoutCurrent = prevChats.filter(
-          (_, index) => index !== chatIndex
-        );
-
-        // Sort all chats by last_message_timestamp (newest first)
-        const sortedChats = sortChatsByTimestamp([
-          updatedChat,
-          ...chatsWithoutCurrent,
-        ]);
-
-        return sortedChats;
+        // Chat not found - will fetch from server outside of setState
+        return prevChats;
       });
+
+      // Check if this is a new chat (not in current list) and fetch full details from server
+      setChats((prevChats) => {
+        const chatExists = prevChats.some((chat) => chat.chat_id === message.chat_id);
+        if (!chatExists) {
+          // Fetch full chat details from server (async, outside setState)
+          fetchNewChatDetails(message.chat_id, message);
+        }
+        return prevChats;
+      });
+    };
+
+    // Helper function to fetch new chat details from server
+    const fetchNewChatDetails = async (chatId, message) => {
+      try {
+        const API_URL = (
+          process.env.REACT_APP_API_URL || "http://localhost:3001"
+        ).replace(/\/+$/, "");
+        const token = localStorage.getItem("accessToken");
+        
+        const res = await fetch(`${API_URL}/api/chats/${chatId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const chatFromServer = data.chat;
+
+          // Build the new chat object with full member info
+          const newChat = {
+            chat_id: chatFromServer.chat_id,
+            chat_name: chatFromServer.chat_name,
+            chat_type: chatFromServer.chat_type,
+            chat_image: chatFromServer.chat_image,
+            members: chatFromServer.members || [],
+            last_message: {
+              message_id: message.message_id,
+              preview_text:
+                message.message_text ||
+                (message.attachments?.length ? "[Attachment]" : "Empty message"),
+              sender: message.sender,
+              has_attachment: !!(message.attachments && message.attachments.length),
+              created_at: message.created_at,
+            },
+            last_message_timestamp: message.created_at,
+            sender_id: message.sender_id,
+            created_at: chatFromServer.created_at,
+            unread_count: message.sender_id !== userId ? 1 : 0,
+          };
+
+          // Add to chats list
+          setChats((prevChats) => {
+            // Double-check it doesn't exist already
+            if (prevChats.some((c) => c.chat_id === chatId)) {
+              return prevChats;
+            }
+            const sortedChats = sortChatsByTimestamp([newChat, ...prevChats]);
+            return sortedChats;
+          });
+
+          // Join the chat room
+          socketService.joinChat(chatId);
+
+          // Fetch user profiles for private chat members
+          if (chatFromServer.chat_type === "private" && chatFromServer.members) {
+            chatFromServer.members.forEach((member) => {
+              if (member.user_id !== userId) {
+                fetchUserProfile(member.user_id);
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching new chat details:', err);
+      }
     };
 
     // Listen for user online/offline status to update chat list
@@ -792,10 +842,10 @@ const ChatHome = () => {
   };
 
   // Delete chat
-  const handleDeleteChat = async (selectedChatId) => {
-    if (!selectedChatForMenu && !selectedChatId) return;
+  const handleDeleteChat = async (chatIdParam) => {
+    if (!selectedChatForMenu && !chatIdParam) return;
 
-    const chatId = selectedChatId || selectedChatForMenu.chat_id;
+    const chatId = chatIdParam || selectedChatForMenu.chat_id;
 
     // Confirm deletion
     const confirmed = window.confirm(
@@ -820,11 +870,11 @@ const ChatHome = () => {
       if (res.ok) {
         // Remove chat from local state
         setChats((prevChats) =>
-          prevChats.filter((c) => c.chat_id !== selectedChatForMenu.chat_id)
+          prevChats.filter((c) => c.chat_id !== chatId)
         );
 
         // If the deleted chat was selected, deselect it
-        if (selectedChatId === selectedChatForMenu.chat_id) {
+        if (selectedChatId === chatId) {
           setSelectedChatId(null);
         }
       }
@@ -1205,6 +1255,11 @@ const ChatHome = () => {
             prevChats.filter((c) => !selectedChats[c.chat_id])
           );
 
+          // If the currently selected chat was deleted, deselect it
+          if (selectedChatId && selectedChatIds.includes(selectedChatId)) {
+            setSelectedChatId(null);
+          }
+
           // setChats(sortChatsByTimestamp(updated));
           showToast("Deleted Selected Chats successfully", "success");
         } else {
@@ -1418,16 +1473,22 @@ const ChatHome = () => {
                       chat.chat_type === "private" &&
                       Array.isArray(chat.members)
                     ) {
-                      // Find the other member
+                      // Find the other member (use Number() to ensure type match)
+                      const currentUserId = Number(userId);
                       const other = chat.members.find(
-                        (m) => m.user_id !== userId
+                        (m) => Number(m.user_id) !== currentUserId
                       );
+                      
                       if (other) {
                         otherUserId = other.user_id;
                         if (other.user && other.user.full_name) {
                           displayName = other.user.full_name;
                         } else if (other.user && other.user.username) {
                           displayName = other.user.username;
+                        } else if (userProfiles[other.user_id]?.full_name) {
+                          displayName = userProfiles[other.user_id].full_name;
+                        } else if (userProfiles[other.user_id]?.username) {
+                          displayName = userProfiles[other.user_id].username;
                         }
                       }
                     } else if (chat.chat_type === "group") {

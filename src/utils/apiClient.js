@@ -3,6 +3,8 @@
  * Handles 401 errors by refreshing the access token and retrying the request
  */
 
+import { handleSessionExpiry } from './auth';
+
 // Ensure the configured base URL does not end with a slash to avoid `//` when joining paths
 const API_BASE_URL = (
   process.env.REACT_APP_API_URL || "http://localhost:3001"
@@ -43,10 +45,7 @@ const refreshAccessToken = async () => {
     } else {
       console.error("Token refresh failed:", refreshRes.status);
       // If refresh fails, redirect to login
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      handleSessionExpiry();
       return null;
     }
   } catch (error) {
